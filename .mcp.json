@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "colab-mcp": {
+      "command": "python",
+      "args": [
+        "-m",
+        "uv",
+        "tool",
+        "run",
+        "git+https://github.com/googlecolab/colab-mcp"
+      ]
+    }
+  }
+}
