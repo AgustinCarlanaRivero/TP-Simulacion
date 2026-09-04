@@ -19,8 +19,9 @@ ejecute localmente: guarda la propuesta, la documentación del modelo y la base 
 
 ## Instalación
 
-Solo hace falta para trabajar con Claude Code sobre los notebooks de Colab. Para leer la propuesta o
-la documentación no se instala nada.
+Para leer la propuesta o la documentación no se instala nada. Sí hacen falta dos cosas: `uv` y Claude
+Code para trabajar sobre los notebooks de Colab, y `nbstripout` para cualquiera que vaya a commitear un
+`.ipynb`.
 
 ### Requisitos
 
@@ -41,7 +42,8 @@ la documentación no se instala nada.
 ```bash
 git clone https://github.com/AgustinCarlanaRivero/TP-Simulacion.git
 cd TP-Simulacion
-pip install uv
+pip install uv nbstripout
+python -m nbstripout --install --attributes .gitattributes
 claude
 ```
 
@@ -52,6 +54,24 @@ Colab. Se verifica con `/mcp`.
 El server expone al principio una sola herramienta, `open_colab_browser_connection`; recién al abrir
 esa conexión aparecen las de edición del notebook. Conviene abrirla solo en las sesiones que
 efectivamente tocan el notebook (ver [herramientas.md](herramientas.md)).
+
+### Filtro de notebooks (`nbstripout`)
+
+Obligatorio para todo el que vaya a commitear un `.ipynb`, use o no Claude Code:
+
+```bash
+pip install nbstripout
+python -m nbstripout --install --attributes .gitattributes
+```
+
+Limpia los outputs y la metadata de ejecución en el momento del `git add`: el archivo en disco conserva
+los gráficos, y lo que se versiona es solo el texto de las celdas. Sin el filtro, `TP 4 Simu.ipynb` son
+266 KB de JSON minificado **en una sola línea** y cualquier diff es ilegible; con el filtro, 26 KB en
+776 líneas comparables.
+
+**Se instala una vez por clon.** El [.gitattributes](.gitattributes) viaja con el repositorio, pero la
+definición del filtro vive en `.git/config`, que no se versiona. Si alguien no corre los dos comandos,
+git ignora el atributo **sin avisar** y commitea el notebook entero con los outputs adentro.
 
 ## Datos
 
