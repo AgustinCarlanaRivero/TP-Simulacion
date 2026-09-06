@@ -1,14 +1,13 @@
 # TP Final — Simulación (UTN)
 
-Trabajo Práctico Final de Simulación. Es una **extensión del TP 4** (simulación evento a evento de una
-estación de carga de vehículos eléctricos) con un modelo bastante más complejo: red de estaciones con
+Trabajo Práctico Final de Simulación. Está basado en el trabajo que hicimos para el **TP 4** (simulación evento a evento de una
+estación de carga de vehículos eléctricos), pero con un modelo bastante más complejo: red de estaciones con
 expansión dinámica, demanda variable por franja horaria y por año, fallas/mantenimiento de cargadores
 y análisis económico.
 
 - Propuesta aprobada: [Propuesta_TP-FINAL.md](Propuesta_TP-FINAL.md) — fuente de verdad del modelo
   (variables, eventos, condiciones). Si se corrige el modelo, se corrige ahí.
-- Base de código: [TP 4 Simu.ipynb](TP%204%20Simu.ipynb) — ajuste de FDPs + motor evento a evento simple.
-- `project-piojito/`: **fuera de alcance por ahora**. No leer ni modificar salvo pedido explícito.
+- Base de código del TP 4: [TP 4 Simu.ipynb](TP%204%20Simu.ipynb) — ajuste de FDPs + motor evento a evento simple.
 
 **Título:** *Estudio de la eficiencia técnica, operativa y financiera en la infraestructura de una
 estación de carga de vehículos eléctricos a través de la simulación de eventos discretos en CABA.*
@@ -47,6 +46,12 @@ Metodología: **evento a evento**, avance al próximo evento por mínimo de la T
 3. **Múltiples estaciones y cargadores con expansión dinámica**: arranca con 1 estación y 4 cargadores.
    Cada mes ocurre un **Análisis de Expansión** que decide, por conveniencia económica, agregar un
    cargador y/o construir una estación. Topes: `CC_MAX` (cargadores por estación) y `CE_MAX` (estaciones).
+   Cada estación tiene **su propio flujo de arribos** (`TPI(i)`, generado con la `IA` de la franja y el
+   tipo de día vigentes): no hay un arribo global que después elija estación. Al ocurrir el arribo a la
+   estación `i` se evalúa contra `PDCE` si el auto **efectivamente ingresa**; si no ingresa, es demanda
+   no capturada (competencia) y no genera cola ni cuenta como arrepentimiento — `CARRUM(i)` sólo cuenta
+   autos que ingresaron y se fueron por la cola única de la estación. Así la red capta `PDCE·CE` % de la demanda total, que es
+   lo que acota la condición de construcción de estación.
 4. **Fallas y mantenimiento**: cada cargador falla según `TFC` y queda fuera de servicio según `TRC`.
    Mantenimiento preventivo cada `TMP` días por estación, que **recalcula la próxima falla** de cada cargador.
 5. **Estructura de costos dinámica**: precio de energía por franja (pico/valle), mantenimiento,
@@ -65,29 +70,29 @@ Metodología: **evento a evento**, avance al próximo evento por mínimo de la T
 | `TRC` | Tiempo para reparar un cargador (min) |
 
 **Control** — `RC` (recaudación por carga, $/kWh), `TMP` (días entre mantenimientos preventivos),
-`PDCE` (% de demanda a capturar por estación).
+`PDCE` (% de demanda a capturar por estación, aplicado como probabilidad de ingreso en cada arribo).
 
 **Resultado** — por franja horaria `(i)` y su promedio: `BM`/`BMP` (beneficio mensual), `PTO`/`PTOP`
 (% tiempo ocioso), `PEC`/`PECP` (% espera en cola), `PPS`/`PPSP` (permanencia en el sistema),
 `PARR`/`PARRP` (% arrepentimiento), `PDC`/`PDCP` (% disponibilidad de cargadores).
 
-**Estado** — `CA(i)(j)` autos por cargador `j` de la estación `i`, `CC(i)` cargadores por estación,
-`CE` cantidad de estaciones.
+**Estado** — `CA(i)` autos en la estación `i` (cargando + en la cola única), `CD(i)` cargadores
+disponibles (instalados y no fallados), `CC(i)` cargadores por estación, `CE` cantidad de estaciones.
 
-**TEF** — `TPI(i)`, `TPC(i)(j)`, `TPAE`, `TPIC`, `TPCE`, `TPFC(i)(j)`, `TPRC(i)(j)`, `TPMP(i)`.
+**TEF** — `TPI(i)` (uno por estación, no uno global), `TPC(i)(j)`, `TPAE`, `TPIC`, `TPCE`, `TPFC(i)(j)`, `TPRC(i)(j)`, `TPMP(i)`.
 
 **Auxiliares** — `CARRUM(i)` (arrepentidos del último mes), `ECP` (energía cargada promedio),
-`CPAACUM` (promedio de autos atendidos por cargador en el último mes).
+`CPAACUM` (promedio de autos atendidos por cargador en el último mes). Seguro surjan más.
 
 **Constantes** — `CC_MAX`, `CE_MAX`, `CCP` (costo por carga promedio), `CPN` (costo puesto nuevo),
-`CEN` (costo estación nueva).
+`CEN` (costo estación nueva). Seguro surjan más.
 
 ### Eventos y condiciones
 
 | Evento (no condicionado) | Evento condicionado que dispara | Condición |
 |---|---|---|
-| Ingreso de auto a estación `(i)` | Carga en cargador `(i)(j)` | `CA(i)(j) ≤ CC(i)` |
-| Carga en cargador `(i)(j)` | Carga en cargador `(i)(j)` | `CA(i)(j) ≥ CC(i)` |
+| Ingreso de auto a estación `(i)` | Carga en cargador `(i)(j)` | `R ≤ PDCE/100 && CA(i) < CD(i)` |
+| Carga en cargador `(i)(j)` | Carga en cargador `(i)(j)` | `CA(i) ≥ CD(i)` |
 | Análisis de Expansión | Instalación de nuevo cargador `(i)` | `TPIC = HV && CC(i) < CC_MAX && CARRUM(i)·(RC·ECP − CCP) > CPN` |
 | Análisis de Expansión | Construcción de nueva estación | `TPCE = HV && CE < CE_MAX && PDCE·CE < 100 && CPAACUM·4·(RC·ECP − CCP) > CEN` |
 | Falla de cargador `(i)(j)` | Reparación de cargador `(i)(j)` | `TPRC(i)(j) = HV` |
@@ -103,17 +108,20 @@ Reusar (está bien resuelto):
   (`cdf(min)`–`cdf(max)`), para no generar valores fuera del dominio real.
 - Estructura general del loop evento a evento y de los acumuladores.
 
-Resultados ya obtenidos en el TP 4 (para no re-derivarlos): `TC` → `gumbel_r(loc=84.39, scale=60.19)`
+Resultados ya obtenidos en el TP 4 (como referencia, pero pueden ser re-derivados): `TC` → `gumbel_r(loc=84.39, scale=60.19)`
 acotada en [0.1, 1375.92] min; `IA` global → `landau(loc=4.17, scale=3.00)` acotada en [0.5, 1538] min;
-energía ≈ `0.0859·TC − 1.7595` kWh; `PE = 108.48 $/kWh`. Dataset: `EVChargingStationUsage.csv` en Drive
-(`/content/drive/MyDrive/Colab Notebooks/TP 4 Simu/Datos/`).
+energía ≈ `0.0859·TC − 1.7595` kWh; `PE = 108.48 $/kWh`. Dataset: `Dataset California.csv` en Drive
+(`/content/drive/MyDrive/Colab Notebooks/TP Final Simu/Datos/`).
 
 Cambia (no copiar tal cual):
 
 - **Un solo IA global → 6 IAs por franja/tipo de día**, más el factor logístico de crecimiento. El reloj
   tiene que mapear `T` (minutos desde el inicio) a hora del día y tipo de día.
-- **Elección de servidor aleatoria** (`eleccion_server` usa `random.randrange`) → definir y justificar la
-  política real: elección de estación según `PDCE` y, dentro de la estación, cola única o menor cola.
+- **Elección de servidor aleatoria** (`eleccion_server` usa `random.randrange`) → en el TP final **no hay
+  elección de estación ni de cargador**: cada estación tiene su propio `TPI(i)` y `PDCE` decide, arribo
+  por arribo, si el auto ingresa o se pierde; adentro, la estación atiende con **una única cola FCFS**
+  (el que espera toma el primer cargador que se libera). Decidido y justificado en la propuesta, con dos
+  supuestos explicitados ahí: cargadores homogéneos e intercambiables, y sin reserva de turno.
 - **Arrepentimiento hardcodeado** (`PORCENTAJE_ARREPENTIMIENTO = 0.93`, corte duro en ≥3 autos) →
   parametrizar y justificar.
 - **~20 globals sueltos y `calculo_resultados` que solo imprime** → el motor debe **devolver** las
@@ -249,3 +257,6 @@ de arriba de entrada.
 - Segmentación del dataset por franja horaria y tipo de día para obtener las 6 FDPs de IA.
 - Valores de `CC_MAX`, `CE_MAX`, `CPN`, `CEN`, `CCP`, tarifas pico/valle y costos de mantenimiento.
 - Cantidad de notebooks: uno solo, o separar "análisis de datos y FDPs" de "motor + experimentación".
+- Qué pasa con el auto que está cargando cuando **falla ese cargador**: si vuelve a la cabecera de la
+  cola única, si se pierde, o si retoma la carga al repararse. La propuesta no lo cubre y con fila única
+  hay que definirlo (afecta `PPS`, `PARR` y `PDC`).

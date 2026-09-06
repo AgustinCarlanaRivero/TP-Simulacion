@@ -86,11 +86,15 @@ Este modelo plantea varias complejidades, las cuales se detallan a continuación
   económica: si la demanda perdida por falta de capacidad representa una pérdida mayor al costo de
   incorporar un nuevo cargador, se agrega un puesto; y si la demanda que se podría captar en una nueva
   estación representa una ganancia mayor al costo de construirla, se agrega una nueva estación. Ambas
-  expansiones tendrán un límite, dado por el espacio físico (CC_MAX y CE_MAX). Cada estación captura
-  un porcentaje determinado de la demanda total (PDCE), por lo que los vehículos se distribuyen entre
-  las distintas estaciones, y dentro de cada una son atendidos por sus respectivos cargadores. De esta
-  forma, la cantidad de estaciones y puestos evoluciona durante la simulación según la demanda y la
-  conveniencia económica de ampliar la infraestructura.
+  expansiones tendrán un límite, dado por el espacio físico (CC_MAX y CE_MAX). Cada estación tiene su
+  propio flujo de arribos: al ocurrir un arribo en la estación (i) se evalúa contra el PDCE si el
+  vehículo efectivamente ingresa, de modo que cada estación captura ese porcentaje de la demanda total
+  y el resto queda en manos de la competencia. Los vehículos que ingresan son atendidos por los
+  cargadores de esa estación, que atienden por una única cola FCFS. Como cada estación modela sus
+  arribos por separado, la red en conjunto
+  capta un PDCE * CE % de la demanda, que es justamente lo que acota la condición de construcción de
+  una nueva estación. De esta forma, la cantidad de estaciones y puestos evoluciona durante la
+  simulación según la demanda y la conveniencia económica de ampliar la infraestructura.
 - **Falla y mantenimiento de cargadores:** Los cargadores no poseen disponibilidad permanente. Estos
   pueden fallar de manera aleatoria respecto a una FDP, y cuando sucede permanecen fuera de servicio
   una cantidad de tiempo aleatoria que está dada por otra FDP (hasta completar su reparación). Además,
@@ -145,7 +149,10 @@ Este modelo plantea varias complejidades, las cuales se detallan a continuación
 
 #### Estado
 
-- **CA(i)(j)** (Cantidad de Autos por cargador de cada estación) [^i-j]
+- **CA(i)** (Cantidad de Autos en la estación (i): los que están cargando más los que esperan en su
+  cola única)
+- **CD(i)** (Cantidad de Cargadores Disponibles de la estación (i): instalados y en servicio, es decir
+  sin contar los que están fallados)
 - **CC(i)** (Cantidad de Cargadores por estación)
 - **CE** (Cantidad de Estaciones)
 
@@ -166,8 +173,8 @@ Este modelo plantea varias complejidades, las cuales se detallan a continuación
 
 | Evento | Evento Futuro no Condicionado | Evento Futuro Condicionado | Condición |
 |---|---|---|---|
-| Ingreso de auto a una estación | Ingreso de auto a una estación (i) | Carga de auto en un cargador de una estación (i) (j) | `CA(i)(j) ≤ CC(i)` |
-| Carga de auto en un cargador de una estación (i) (j) | – | Carga de auto en un cargador de una estación (i) (j) | `CA(i)(j) ≥ CC(i)` |
+| Ingreso de auto a una estación (i) | Ingreso de auto a una estación (i) | Carga de auto en un cargador de una estación (i) (j) | `R ≤ PDCE / 100 && CA(i) < CD(i)` |
+| Carga de auto en un cargador de una estación (i) (j) | – | Carga de auto en un cargador de una estación (i) (j) | `CA(i) ≥ CD(i)` |
 | Análisis de Expansión | Análisis de Expansión | Instalación de nuevo cargador (i) | `TPIC = HV && CC(i) < CC_MAX && CARRUM(i) * (RC * ECP - CCP) > CPN` |
 | | | Construcción de nueva estación | `TPCE = HV && CE < CE_MAX && PDCE * CE < 100 && CPAACUM * 4 * (RC * ECP - CCP) > CEN` |
 | Instalación de nuevo cargador (i) | – | – | – |
@@ -178,6 +185,29 @@ Este modelo plantea varias complejidades, las cuales se detallan a continuación
 
 Las dos filas de **Análisis de Expansión** corresponden a un mismo evento: dispara dos eventos
 condicionados distintos, cada uno con su condición.
+
+En el **Ingreso de auto a una estación (i)**, `R` es el número aleatorio uniforme en [0, 1) que se
+sortea en cada arribo y `PDCE` está expresado en porcentaje. Si `R > PDCE / 100` el vehículo no
+ingresa a la estación: es demanda no capturada, no ocupa cargador, no hace cola y no cuenta como
+arrepentido en `CARRUM(i)`. Las condiciones sobre `CA(i)` se evalúan antes de dar de alta al auto que
+ingresa y después de dar de baja al que termina de cargar.
+
+**Disciplina de cola dentro de la estación:** cada estación atiende con una **única cola FCFS** común a
+todos sus cargadores. El auto que espera toma el primer cargador que se libera; no se forma una fila
+por cargador ni se elige cargador al ingresar. Por eso el estado es `CA(i)` y no un vector por
+cargador: los `CD(i)` primeros autos están cargando, el resto espera en la cola común, y el
+arrepentimiento se evalúa sobre esa cola y no sobre la de un cargador en particular. La elección se
+apoya en que es la disciplina que se observa en la práctica — en la playa de una estación de servicio
+los autos que esperan no pueden apilarse detrás de un cargador ocupado teniendo otro libre — y es la
+que las redes de carga están formalizando con listas de espera únicas por estación. Es además la
+disciplina de la M/M/c, que es el modelo más usado en la literatura de estaciones de carga y sirve
+como referencia para validar el motor.
+
+Esta disciplina supone que: (a) los `CC(i)` cargadores de una estación son homogéneos e
+intercambiables, cuando en la realidad los conectores no lo son (CCS, CHAdeMO, AC) y eso generaría una
+cola por tipo de conector; y (b) no hay reserva de turno, cuando las apps de las redes de carga ya
+muestran disponibilidad en tiempo real y anuncian la reserva — atender por orden de llegada
+sobrestima la espera respecto de un sistema con reservas.
 
 ---
 
