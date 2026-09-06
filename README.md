@@ -15,7 +15,9 @@ ejecute localmente: guarda la propuesta, la documentación del modelo y la base 
 | [Propuesta_TP-FINAL.md](Propuesta_TP-FINAL.md) | Propuesta aprobada. **Fuente de verdad del modelo**: variables, eventos y condiciones |
 | [CLAUDE.md](CLAUDE.md) | Modelo a simular, nomenclatura y convenciones del notebook |
 | [herramientas.md](herramientas.md) | Método de trabajo: qué herramienta se adopta, cuál se descarta y por qué |
+| [Arrepentimiento_Alternativas.md](Arrepentimiento_Alternativas.md) | Alternativas para modelar el arrepentimiento, con pros, contras y qué habría que tocar en la propuesta |
 | [TP 4 Simu.ipynb](TP%204%20Simu.ipynb) | Base de código: ajuste de FDPs + motor evento a evento simple |
+| [Bibliografia/](Bibliografia/) | Copias locales de los papers y el informe que cita el TP, con su índice |
 
 ## Instalación
 

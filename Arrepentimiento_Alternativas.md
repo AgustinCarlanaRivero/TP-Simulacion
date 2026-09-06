@@ -705,20 +705,26 @@ Si adoptamos **E** (o **D** + **G** + **H**), estos son los cambios mínimos a
 
 ## 12. Fuentes
 
+Los PDF están en [`Bibliografia/`](Bibliografia/), con su índice.
+
 1. **EAFO Consumer Monitor 2023 — European Aggregated Report.** Vanhaverbeke, Verbist, Barrera
-   (VUB-MOBI) y Csukas (FIER), Comisión Europea, DG MOVE, junio 2024. doi:10.2832/062076.
+   (VUB-MOBI) y Csukas (FIER), Comisión Europea, DG MOVE, junio 2024. doi:10.2832/062076
+   ([PDF](Bibliografia/EAFO_Consumer_Monitor_2023_EU_Aggregated_Report.pdf)).
    Sección 3.4 y figura 10: esperas tolerada y declarada en puntos de carga públicos.
 2. **IDEAS: Information-Driven EV Admission in Charging Station Considering User Impatience to
    Improve QoS and Station Utilization.** A. Chattopadhyay, S. Kar, IIT Delhi, arXiv:2403.06223v1
-   (10 de marzo de 2024). Balking forzado/voluntario y reneging (§III-A); factor de impaciencia
-   `z = 0,6` (ec. 5 y 9); estimadores por perfil (ec. 10–12); cola con abandono desde cualquier
+   (10 de marzo de 2024)
+   ([PDF](Bibliografia/IDEAS_2024_Chattopadhyay_Kar_arXiv_2403.06223.pdf)). Balking
+   forzado/voluntario y reneging (§III-A); factor de impaciencia `z = 0,6` (ec. 5 y 9); estimadores por perfil (ec. 10–12); cola con abandono desde cualquier
    posición (Algoritmo 1); los cuatro casos `BlockingFC` / `ObservationFC` / `InformedFC` /
    `Informed2PortCharge` (§V); resultados en la Tabla II.
 3. **Distributed Electric Vehicles Charging Management Considering Time Anxiety and Customer
-   Behaviors.** A. Alsabbagh, B. Wu, C. Ma, *IEEE Transactions on Industrial Informatics*, 2020.
+   Behaviors.** A. Alsabbagh, B. Wu, C. Ma, *IEEE Transactions on Industrial Informatics*, 2020
+   ([PDF](Bibliografia/TimeAnxiety_2020_Alsabbagh_Wu_Ma_IEEE_TII.pdf)).
    Concepto de *time anxiety*, cuatro perfiles de conductor y sus formas funcionales (ec. 11–13).
 4. **ACN-Data: Analysis and Applications of an Open EV Charging Dataset.** Z. J. Lee, T. Li, S. H. Low,
    *e-Energy '19*. Citado por IDEAS (figs. 3 y 4) para la duración de carga y el perfil horario de
    demanda; corrobora nuestro `TC` y nuestro corte de franjas.
-5. **Paper del TP 4** (Carlana Rivero, Loglen, Millán, Ojeda Cabrera, UTN-FRBA). §2.1: regla de
-   arrepentimiento vigente; §3: resultados de referencia.
+5. **Paper del TP 4** (Carlana Rivero, Loglen, Millán, Ojeda Cabrera, UTN-FRBA)
+   ([PDF](Bibliografia/Paper_TP_4.pdf)). §2.1: regla de arrepentimiento vigente; §3: resultados de
+   referencia.
