@@ -3,9 +3,6 @@
 > **Estado:** documento de trabajo para discutir entre los cuatro. No es una decisión tomada.
 > Lo que elijamos hay que bajarlo a [Propuesta_TP-FINAL.md](Propuesta_TP-FINAL.md): siglas nuevas,
 > tabla de eventos y TEF (ver [§11](#11-qué-hay-que-tocar-en-la-propuesta)).
->
-> **v2** — incorpora la lectura completa del paper IDEAS (arXiv 2403.06223). Los cambios respecto de
-> la v1 están marcados con 🆕.
 
 ---
 
@@ -15,7 +12,7 @@ El arrepentimiento es la variable que más pesa en el TP final y hoy es la peor 
 modelo: la propuesta **no la define en ninguna parte** (aparece `CARRUM(i)` en la condición de
 expansión, pero nunca se dice cómo se genera un arrepentido), y lo único que tenemos es la regla
 hardcodeada del TP 4, que además **no se puede portar tal cual** al esquema de fila única — y que,
-como se ve en [§3.3](#33--el-93--del-tp-4-es-una-lectura-equivocada-del-paper), está apoyada en una
+como se ve en [§3.3](#33-el-93--del-tp-4-es-una-lectura-equivocada-del-paper), está apoyada en una
 lectura equivocada de la fuente.
 
 Ocho alternativas sobre la mesa, ordenadas de menos a más ambiciosa:
@@ -24,12 +21,12 @@ Ocho alternativas sobre la mesa, ordenadas de menos a más ambiciosa:
 |---|---|---|---|---|
 | **A** | Umbral por longitud de cola (TP 4 corregido) | Balking voluntario | Bajo | Sirve sólo como **baseline** para comparar |
 | **B** | Probabilidad continua en la longitud de cola | Balking voluntario | Bajo | Mejor que A, pero sin anclaje empírico |
-| **H** 🆕 | Cola finita: se llena y no entra nadie más | Balking **forzado** | Muy bajo | **Hacerlo sí o sí**, es independiente del resto |
+| **H** | Cola finita: se llena y no entra nadie más | Balking **forzado** | Muy bajo | **Hacerlo sí o sí**, es independiente del resto |
 | **C** | Paciencia empírica vs. espera estimada | Balking voluntario | Medio | **Recomendada** como núcleo |
-| **G** 🆕 | Paciencia proporcional al tiempo de carga propio | Paciencia | Bajo | **Recomendada** junto con C: una acota a la otra |
+| **G** | Paciencia proporcional al tiempo de carga propio | Paciencia | Bajo | **Recomendada** junto con C: una acota a la otra |
 | **D** | Paciencia como reloj: abandono en cola | Reneging | Medio-alto | **Recomendada**; habilita validar contra Erlang-A |
 | **E** | Híbrido C+D+G con/sin información al usuario | Todos | Alto | **Objetivo final**; agrega un eje experimental gratis |
-| **F** | Población heterogénea de perfiles | Se monta sobre C/D/E | Medio | Opcional; ahora tiene fórmulas concretas |
+| **F** | Población heterogénea de perfiles | Se monta sobre C/D/E | Medio | Opcional; con fórmulas tomadas de la bibliografía |
 
 **Recomendación:** ir a **E**, construido por etapas (**H → A → D → G+C → E**), porque cada etapa deja
 un resultado presentable aunque nos quedemos sin tiempo. Detalle en
@@ -43,7 +40,7 @@ En teoría de colas no hay uno sino tres fenómenos, y el TP 4 los mezcló en un
 explícitamente y conviene que nosotros también:
 
 - **Balking forzado (no hay lugar):** el auto llega, la capacidad de espera está llena y no puede
-  entrar aunque quiera. No es una decisión del usuario: es una restricción física de la estación. 🆕
+  entrar aunque quiera. No es una decisión del usuario: es una restricción física de la estación.
 - **Balking voluntario (no vale la pena):** hay lugar, pero el auto ve la cola, estima la espera y
   decide no entrar. **No ocupa cola, no espera, no consume capacidad.** Es lo único que modela el TP 4.
 - **Reneging (abandono):** el auto entra, hace cola, espera, y en algún momento se va sin cargar.
@@ -76,8 +73,16 @@ En el paper del TP 4 (§2.1) escribimos:
 
 ### 3.2. Tres problemas (uno de ellos, un bug)
 
-**(a) El código no hace lo que dice el paper.** En `TP 4 Simu.ipynb`, `arrepentimiento()` evalúa
-`NS[i]` *antes* de incrementarlo:
+**(a) El código no hace lo que dice el paper.** Las dos versiones de la regla se evalúan sobre los
+autos **ya presentes** en el puesto — `NS[i]` incluye al que está cargando, igual que el `CA(i)` del
+TP final — pero los umbrales no coinciden:
+
+| Autos ya presentes en el puesto | Paper | Código |
+|---|---|---|
+| 0 | ingresa | ingresa |
+| 1 | **93 % abandona** | **ingresa** |
+| 2 | 100 % abandona | 93 % abandona |
+| ≥ 3 | 100 % abandona | 100 % abandona |
 
 ```python
 if cant_autos <= 1:   return False          # 0 o 1 autos -> ingresa siempre
@@ -112,9 +117,9 @@ por longitud no se entera. Como `TMP` es una de nuestras tres variables de contr
 con un modelo de balking por longitud, **`TMP` casi no puede mover `PARR`**, y el análisis de
 sensibilidad de mantenimiento se queda sin efecto que medir.
 
-### 3.3. 🆕 El 93 % del TP 4 es una lectura equivocada del paper
+### 3.3. El 93 % del TP 4 es una lectura equivocada del paper
 
-Esto es lo más importante que salió de leer IDEAS completo.
+Es el problema de fondo de la regla vigente, y es más grave que los tres anteriores.
 
 En el TP 4 dijimos que tomamos *"el valor de convergencia de la curva ObservationFC con λ = 0,6"*.
 Ese valor existe y es **93,14 %** (Tabla II del paper). Pero **no es lo que creímos que era**:
@@ -142,7 +147,7 @@ estación mucho más saturada que la nuestra.
 | **EAFO Consumer Monitor 2023** (Comisión Europea) | Distribución empírica de espera tolerada por conductores de BEV | Es la **FDP de paciencia** en valor absoluto |
 | **IDEAS** (Chattopadhyay & Kar, arXiv 2403.06223) | Balking forzado / voluntario / reneging; **paciencia proporcional al tiempo de carga propio** (`z = 0,6`); estimadores de espera por perfil; efecto de informar la espera | Núcleo del modelo de comportamiento y escalera de escenarios |
 | **Alsabbagh, Wu & Ma** (IEEE TII, 2020) | *Time anxiety*: la impaciencia crece con el tiempo transcurrido; cuatro perfiles y tres formas funcionales (log, lineal, exponencial) | Forma de la curva de impaciencia y mezcla de perfiles |
-| **ACN-Data** (vía IDEAS, figs. 3 y 4) 🆕 | Duración de carga más frecuente **entre 100 y 200 min**; horas activas 07–23 con picos **09–10 y 14–19** | **Corrobora dos supuestos nuestros**: el `TC` medio ≈ 119 min y el corte de franjas 08–13 / 13–20 / 20–08 |
+| **ACN-Data** (vía IDEAS, figs. 3 y 4) | Duración de carga más frecuente **entre 100 y 200 min**; horas activas 07–23 con picos **09–10 y 14–19** | **Corrobora dos supuestos nuestros**: el `TC` medio ≈ 119 min y el corte de franjas 08–13 / 13–20 / 20–08 |
 | **Paper del TP 4** | La regla del 93 % y los resultados de referencia | Baseline de comparación |
 
 ### 4.1. El dato de EAFO: paciencia en valor absoluto
@@ -169,7 +174,7 @@ Tres lecturas que hay que hacer explícitas si usamos esto:
    entre países del "15 minutos o menos" va de **10 % (Lituania) a 42 % (Francia)**: sirve como
    rango de sensibilidad razonable en vez de inventar uno.
 
-### 4.2. 🆕 El dato de IDEAS: paciencia relativa a la propia necesidad
+### 4.2. El dato de IDEAS: paciencia relativa a la propia necesidad
 
 IDEAS **no** define la paciencia en minutos absolutos. La define como una fracción del tiempo que el
 propio usuario necesita cargar:
@@ -191,9 +196,9 @@ Y el usuario abandona cuando el tiempo ya esperado supera ese umbral (ec. 13 del
 **Los dos datos se contradicen, y por mucho.** Con nuestro `TC` (media ≈ 119 min, mediana ≈ 107 min),
 `z · TC` da paciencias de **~64 a ~71 min**, contra los **~15 min** que sugiere la mediana de EAFO.
 Un factor 4. No es un detalle: define si el modelo da 20 % o 70 % de arrepentimiento. En
-[§5.G](#g--paciencia-proporcional-al-tiempo-de-carga-propio) está la propuesta para resolverlo.
+[§5.G](#g-paciencia-proporcional-al-tiempo-de-carga-propio) está la propuesta para resolverlo.
 
-### 4.3. 🆕 Los resultados de IDEAS (Tabla II) y sus tres contra-intuiciones
+### 4.3. Los resultados de IDEAS (Tabla II) y sus tres contra-intuiciones
 
 | λ | ¿Informa la espera? | Balking % | Reneging % | Servidos % (sobre los que hicieron cola) |
 |---|---|---|---|---|
@@ -216,7 +221,7 @@ Tres resultados que valen para nosotros aunque los niveles no sean transferibles
 3. **El throughput es la métrica equivocada bajo impaciencia.** Como los usuarios de carga corta son
    los menos pacientes, la cola se auto-selecciona hacia usuarios de carga larga: el throughput puede
    verse bien mientras el servicio es malo. Esto tiene consecuencias directas sobre nuestro `BM` y
-   nuestro `ECP` — ver [§7](#7--efectos-de-segundo-orden-que-hay-que-anticipar).
+   nuestro `ECP` — ver [§7](#7-efectos-de-segundo-orden-que-hay-que-anticipar).
 
 ---
 
@@ -243,8 +248,8 @@ con `Q_MIN`, `Q_MAX` expresados en autos en cola **por cargador**.
 - **Pros:** trivial de implementar; comparable con el TP 4; barrer `PARRB` es un análisis de
   sensibilidad legítimo.
 - **Contras:** los tres problemas de [§3.2](#32-tres-problemas-uno-de-ellos-un-bug) siguen ahí salvo el (b);
-  no reacciona a `TMP` ni a las fallas; 🆕 y el valor del 93 % que le daba respaldo resulta que no lo
-  respalda ([§3.3](#33--el-93--del-tp-4-es-una-lectura-equivocada-del-paper)).
+  no reacciona a `TMP` ni a las fallas; y el 93 % que parecía respaldarlo no lo respalda
+  ([§3.3](#33-el-93--del-tp-4-es-una-lectura-equivocada-del-paper)).
 - **Cuándo conviene:** como **baseline** contra el que mostrar que el modelo nuevo aporta algo. Vale
   la pena dejarlo implementado aunque adoptemos otro.
 
@@ -253,14 +258,14 @@ con `Q_MIN`, `Q_MAX` expresados en autos en cola **por cargador**.
 ### B. Probabilidad continua en la longitud de cola
 
 **Idea.** Reemplazar el escalón por una función suave, que es la forma estándar de balking voluntario
-en la literatura de colas. 🆕 IDEAS usa exactamente esto (su ec. 4, tomada de Zhang et al. 2020),
-con un parámetro `σ` que gradúa la sensibilidad a la longitud de la cola:
+en la literatura de colas, y es la que usa IDEAS (ec. 4, tomada de Zhang et al. 2020), con un
+parámetro `σ` que gradúa la sensibilidad a la longitud de la cola:
 
 ```
 P(arrepentirse | q) = 1 - e^(-BETA * q / CD(i))
 ```
 
-> 🆕 **Ojo con la fórmula del paper.** IDEAS la escribe como `P_VB = e^(-(1-w)σ)` con `w ≥ 1`, que da
+> **Ojo con la fórmula del paper.** IDEAS la escribe como `P_VB = e^(-(1-w)σ)` con `w ≥ 1`, que da
 > `e^((w-1)σ) ≥ 1`: no está acotada a [0,1] y para cola > 1 da probabilidad mayor que uno. Es una
 > errata. La lectura sensata es la de arriba (`1 - e^(-σ(w-1))`) o `e^(-σ(k-w))`. Si citamos la
 > fórmula en el informe, hay que citarla corregida y decir por qué.
@@ -269,13 +274,13 @@ P(arrepentirse | q) = 1 - e^(-BETA * q / CD(i))
   del 53–60 % del TP 4 (así queda anclado a algo, aunque sea a nuestro propio resultado anterior).
 - **Cambios en la propuesta:** ninguno estructural.
 - **Pros:** un parámetro, sin discontinuidades; escala solo con `CD(i)`; el barrido de `BETA` da una
-  curva de sensibilidad limpia; 🆕 ahora tiene cita bibliográfica.
+  curva de sensibilidad limpia; y tiene cita bibliográfica.
 - **Contras:** `BETA` no sale de ningún dato; sigue ignorando el tiempo y por lo tanto las fallas y
   `TMP`. Es "A pero prolijo", no un modelo mejor.
 
 ---
 
-### H. 🆕 Cola finita: capacidad física de espera (balking forzado)
+### H. Cola finita: capacidad física de espera (balking forzado)
 
 **Idea.** La estación tiene lugar para `CEM(i)` autos esperando. Si la cola está llena, el que llega
 no entra, decida lo que decida:
@@ -321,7 +326,7 @@ W_est(i)  = (q(i) + 1) / CD(i) * E[TC]
 se arrepiente  <=>  W_est(i) > TMEU
 ```
 
-🆕 **Mejora que aporta IDEAS al estimador.** El paper no usa `E[TC]` (la media poblacional): el
+**El estimador conviene tomarlo de IDEAS.** El paper no usa `E[TC]` (la media poblacional): el
 usuario **proyecta su propia necesidad sobre los que tiene adelante**. Es más plausible y para
 nosotros es gratis, porque ya generamos `TC` por auto:
 
@@ -332,7 +337,7 @@ W_est(i) = f * TC_propio * N / CD(i)
 donde `N` es la cantidad de autos que el usuario "ve" y `f` un factor de perfil (ver
 [alternativa F](#f-población-heterogénea-de-perfiles-se-monta-sobre-c-d-o-e)).
 
-> 🆕 **Consecuencia de implementación:** si la paciencia o la estimación dependen de `TC`, hay que
+> **Consecuencia de implementación:** si la paciencia o la estimación dependen de `TC`, hay que
 > **generar `TC` en el evento de arribo y no al empezar a cargar**, como hace hoy el motor del TP 4.
 > Es un cambio chico pero hay que hacerlo antes, no después.
 
@@ -352,12 +357,12 @@ donde `N` es la cantidad de autos que el usuario "ve" y `f` un factor de perfil 
   - Sigue siendo **sólo balking**: nadie abandona después de haber esperado, y por lo tanto la cola
     nunca se descomprime sola.
   - Con `TC` medio ≈ 119 min y paciencias de 15–30 min, **cualquier** cola genera arrepentimiento
-    casi total. Hay que anticiparlo y explicarlo, no descubrirlo en los resultados. 🆕 Es exactamente
-    el problema que corrige la alternativa G.
+    casi total. Hay que anticiparlo y explicarlo, no descubrirlo en los resultados. Es el problema
+    que corrige la alternativa G.
 
 ---
 
-### G. 🆕 Paciencia proporcional al tiempo de carga propio
+### G. Paciencia proporcional al tiempo de carga propio
 
 **Idea.** En vez de (o además de) sortear una paciencia absoluta, derivarla de la necesidad del
 propio usuario, como hace IDEAS:
@@ -366,7 +371,7 @@ propio usuario, como hace IDEAS:
 TMEU_k = FI * TC_k                  con FI = 0,6 (Factor de Impaciencia)
 ```
 
-**Propuesta concreta para resolver la contradicción con EAFO** ([§4.2](#42--el-dato-de-ideas-paciencia-relativa-a-la-propia-necesidad)):
+**Propuesta concreta para resolver la contradicción con EAFO** ([§4.2](#42-el-dato-de-ideas-paciencia-relativa-a-la-propia-necesidad)):
 usar las dos, con la absoluta como techo.
 
 ```
@@ -416,9 +421,9 @@ evento nuevo:           "Arrepentimiento de auto en cola (i)"
     validación del motor** que hoy no tenemos: corrida degenerada (una estación, sin fallas, sin
     expansión, IA/TC/paciencia exponenciales) contra la fórmula. Es exactamente lo que pide la regla
     de "Verificación del motor" de `CLAUDE.md`, y es el argumento más fuerte a favor de esta opción.
-    🆕 IDEAS usa la misma familia: tasa de abandono `r_k = (k − c)·θ` en un M/M/c/K, con `θ` el
+    IDEAS usa la misma familia: tasa de abandono `r_k = (k − c)·θ` en un M/M/c/K, con `θ` el
     tiempo de impaciencia exponencial.
-  - 🆕 **El abandono desde cualquier posición de la cola es un punto que IDEAS defiende
+  - **El abandono desde cualquier posición de la cola es un punto que IDEAS defiende
     explícitamente** como mejora sobre la literatura previa, que sólo deja abandonar desde la cabecera.
     Nuestra formulación (vencimiento por auto) ya lo hace: conviene decirlo en el informe, es un punto
     a favor del modelo.
@@ -435,7 +440,7 @@ evento nuevo:           "Arrepentimiento de auto en cola (i)"
        fantasma"). Más rápido, pero mete eventos que no son eventos.
   - Sin balking, todos entran: el 31 % de EAFO que se va sin siquiera hacer cola se representa como
     abandono instantáneo (`TMEU = 0`), lo cual es aceptable pero hay que decirlo.
-  - 🆕 **No validar contra las ecuaciones (7) y (8) de IDEAS.** Suman una probabilidad (`P_r`) a un
+  - **No validar contra las ecuaciones (7) y (8) de IDEAS.** Suman una probabilidad (`P_r`) a un
     número de clientes y a un tiempo: no cierran dimensionalmente. La vara correcta es Erlang-A.
 
 ---
@@ -450,26 +455,26 @@ evento nuevo:           "Arrepentimiento de auto en cola (i)"
 
 Y arriba de eso, una variable de control nueva `IEC` (Información de Espera al Cliente):
 
-- `IEC = 0`: el usuario estima a ojo con la cola visible (`W_est` sesgado). 🆕 IDEAS lo llama
+- `IEC = 0`: el usuario estima a ojo con la cola visible (`W_est` sesgado). IDEAS lo llama
   **AWT** (*Assumed Wait Time*).
-- `IEC = 1`: la estación publica la espera real calculada con los tiempos remanentes de carga. 🆕
+- `IEC = 1`: la estación publica la espera real calculada con los tiempos remanentes de carga.
   **EWT** (*Estimated Wait Time*).
 
-🆕 IDEAS muestra que la diferencia entre AWT y EWT no está tanto en el promedio sino en la
+IDEAS muestra que la diferencia entre AWT y EWT no está tanto en el promedio sino en la
 **varianza**: el AWT tiene varianza mucho más alta, y esa incertidumbre es la que genera el reneging.
 Buena métrica para el informe: comparar la varianza de la espera estimada, no sólo su media.
 
 - **Pros:**
   - El más realista y el que mejor cierra con la bibliografía.
   - **Regala un cuarto eje experimental que no cuesta plata:** informar la espera es una política
-    operativa gratis frente a construir un cargador (`CPN`) o una estación (`CEN`). 🆕 Con números
+    operativa gratis frente a construir un cargador (`CPN`) o una estación (`CEN`). Con números
     del paper: reneging **−91 %** y porcentaje de servidos **×2** (37 → 75 %). Si reproducimos aunque
     sea la dirección del efecto, es la conclusión más interesante que puede tener el TP: *hay una
     palanca de eficiencia que no es capital*.
   - Permite descomponer `PARR` en `PARRF` (forzado), `PARRB` (voluntario) y `PARRR` (abandono), que
     es información directa para la expansión: el forzado se cura con capacidad, el voluntario en
     parte con capacidad, y parte del abandono se cura con información.
-  - 🆕 **Cuidado con la lectura de los resultados:** informar la espera **sube** el balking. Si
+  - **Cuidado con la lectura de los resultados:** informar la espera **sube** el balking. Si
     tomamos `PARR` como métrica de éxito, el escenario informado va a "empeorar" mientras el negocio
     mejora. Hay que reportar también el **porcentaje de autos efectivamente atendidos** y `BM`.
 - **Contras:**
@@ -487,7 +492,7 @@ Buena métrica para el informe: comparar la varianza de la espera estimada, no s
 **Idea.** En vez de una única `TMEU`, una mezcla de perfiles con distinta paciencia **y distinto sesgo
 de percepción**: el optimista subestima la espera y entra, el pesimista la sobreestima y se va.
 
-🆕 IDEAS da las tres fórmulas ya escritas (sus ec. 10–12), y son simples de portar. Todas usan el
+IDEAS da las tres fórmulas ya escritas (sus ec. 10–12), y son simples de portar. Todas usan el
 tiempo de carga **del que llega** como proxy del de los que están adelante; lo único que cambia es
 qué SoC supone y a cuántos autos mira:
 
@@ -505,10 +510,10 @@ el tiempo normalizado de espera: **logarítmica** (aguanta bien, se impacienta a
 (proporcional) y **exponencial** (aguanta poco, se va temprano).
 
 - **Pros:** captura que el 31 % de EAFO es un segmento y no una cola; permite decir con números
-  *"este pedazo de la demanda se pierde igual, no lo compres con `CPN`"*; 🆕 ahora tiene fórmulas
-  publicadas en vez de inventadas, y con `f` como único parámetro por perfil es barato.
+  *"este pedazo de la demanda se pierde igual, no lo compres con `CPN`"*; las fórmulas están
+  publicadas y no inventadas, y con `f` como único parámetro por perfil es barato.
 - **Contras:** la mezcla de perfiles no la tenemos medida para CABA (la inventamos); sobreparametriza
-  un modelo que ya tiene tres variables de control; puede volver el informe ilegible. 🆕 Además, si ya
+  un modelo que ya tiene tres variables de control; puede volver el informe ilegible. Además, si ya
   usamos G, buena parte de la heterogeneidad ya la genera la aleatoriedad de `TC`.
 - **Cuándo conviene:** al final, si sobra tiempo, y sólo con dos o tres perfiles.
 
@@ -523,7 +528,7 @@ anotado como limitación en la discusión del informe, no como modelo.
 
 ---
 
-## 6. 🆕 Aparte: la palanca que no es capital ni información
+## 6. Aparte: la palanca que no es capital ni información
 
 Además de informar la espera, IDEAS propone un **cargador de dos modos y dos bocas**: carga rápida
 hasta el 80 % de SoC y, pasado ese punto, la boca conmuta a modo lento y **libera la potencia rápida
@@ -544,7 +549,7 @@ tema del TP.
 
 ---
 
-## 7. 🆕 Efectos de segundo orden que hay que anticipar
+## 7. Efectos de segundo orden que hay que anticipar
 
 Cualquier modelo de paciencia (C, D, E, G) mete tres efectos que **no son bugs** pero que van a
 aparecer en los resultados y conviene tener explicados de antemano:
@@ -572,7 +577,7 @@ Y un detalle de implementación que hay que resolver antes de escribir el motor:
 
 ## 8. Tabla comparativa
 
-| Criterio | A | B | H 🆕 | C | G 🆕 | D | E | F |
+| Criterio | A | B | H | C | G | D | E | F |
 |---|---|---|---|---|---|---|---|---|
 | Mecanismo | balk. vol. | balk. vol. | **balk. forzado** | balk. vol. | paciencia | reneging | todos | modificador |
 | Respaldo empírico | ninguno | fórmula citada | físico | **EAFO** | **IDEAS (z=0,6)** | EAFO/IDEAS | todas | IDEAS + TII |
@@ -590,7 +595,7 @@ Y un detalle de implementación que hay que resolver antes de escribir el motor:
 
 Cada etapa deja algo presentable; si nos quedamos sin tiempo, cortamos donde estemos.
 
-0. **Etapa 0 — Cola finita (H)** 🆕. Un parámetro `CEM(i)` y una condición. Es media hora de trabajo,
+0. **Etapa 0 — Cola finita (H)**. Un parámetro `CEM(i)` y una condición. Es media hora de trabajo,
    acota la cola y evita que los escenarios saturados del final de la curva logística den números
    absurdos. *Verificable:* `q(i) ≤ CEM(i)` en toda la corrida (assert), y el conteo de balking
    forzado es > 0 en hora pico.
@@ -614,15 +619,15 @@ Cada etapa deja algo presentable; si nos quedamos sin tiempo, cortamos donde est
 ## 10. Decisiones que tenemos que cerrar entre los cuatro
 
 1. **¿Qué versión del TP 4 es la válida?** ¿La del paper (93 % con 1 auto) o la del código (93 % con
-   2)? Sin esto, cualquier comparación con el TP 4 es inválida. 🆕 Y hay que decidir además **cómo lo
-   contamos en el informe del TP final**, porque ahora sabemos que el 93 % estaba mal interpretado
-   ([§3.3](#33--el-93--del-tp-4-es-una-lectura-equivocada-del-paper)). Mi opinión: decirlo, es un
-   hallazgo del trabajo nuevo y queda mejor que dejarlo pasar.
-2. 🆕 **¿Paciencia absoluta (EAFO), relativa (`FI·TC`) o el mínimo de las dos?** Es la decisión de
+   2)? Sin esto, cualquier comparación con el TP 4 es inválida. Y hay que decidir **cómo lo contamos
+   en el informe del TP final**, dado que el 93 % está además mal interpretado
+   ([§3.3](#33-el-93--del-tp-4-es-una-lectura-equivocada-del-paper)). Propuesta: decirlo, es un
+   hallazgo del trabajo y queda mejor que dejarlo pasar.
+2. **¿Paciencia absoluta (EAFO), relativa (`FI·TC`) o el mínimo de las dos?** Es la decisión de
    modelado más importante: cambia `PARR` por un factor de 3 o 4. Propuesta: **el mínimo**, con las
    dos puras como cotas de sensibilidad.
 3. **Denominador de `PARR`.** ¿Arrepentidos sobre los arribos que pasaron el filtro `PDCE`, o sobre
-   todos los arribos generados? Propuesta: **sobre los que pasaron `PDCE`**. 🆕 Y agregar la métrica
+   todos los arribos generados? Propuesta: **sobre los que pasaron `PDCE`**. Y agregar la métrica
    de IDEAS: **porcentaje de atendidos sobre los que efectivamente hicieron cola**, que es la que
    muestra la mejora por información.
 4. **`PARR` por franja horaria.** Un auto que llega en la franja 2 y abandona en la 3, ¿en cuál
@@ -631,14 +636,14 @@ Cada etapa deja algo presentable; si nos quedamos sin tiempo, cortamos donde est
    reneging la respuesta natural es: **vuelve a la cabecera de la cola con su paciencia remanente**;
    si se le vence, cuenta como arrepentido. La opción "se pierde" es el caso particular de paciencia
    remanente igual a cero. Sin modelo de paciencia esta decisión es arbitraria; con D o E sale sola.
-6. 🆕 **Valor de `CEM(i)`.** ¿Fijo o proporcional a `CC(i)`? Propuesta: **2 lugares de espera por
+6. **Valor de `CEM(i)`.** ¿Fijo o proporcional a `CC(i)`? Propuesta: **2 lugares de espera por
    cargador**, para que escale con la expansión y siga siendo coherente con el argumento de espacio
    físico de `CC_MAX`.
 7. **Tope del tramo "más de 1 hora"** de EAFO: hay que elegir un valor (¿2 h? ¿3 h?) y justificarlo.
 8. **Cancelación de eventos** (si vamos a D o E): recálculo del mínimo vs. evento fantasma.
    Propuesta: **recálculo**.
-9. 🆕 **¿`ECP` sobre los atendidos o sobre la FDP teórica?** Propuesta: **sobre los atendidos**, por
-   el sesgo de selección de [§7](#7--efectos-de-segundo-orden-que-hay-que-anticipar). Afecta las dos
+9. **¿`ECP` sobre los atendidos o sobre la FDP teórica?** Propuesta: **sobre los atendidos**, por
+   el sesgo de selección de [§7](#7-efectos-de-segundo-orden-que-hay-que-anticipar). Afecta las dos
    condiciones de expansión.
 
 ---
@@ -664,10 +669,10 @@ Si adoptamos **E** (o **D** + **G** + **H**), estos son los cambios mínimos a
 
 | Sigla | Significado |
 |---|---|
-| `PARRF` 🆕 | Porcentaje de arrepentimiento forzado (no había lugar de espera) |
+| `PARRF` | Porcentaje de arrepentimiento forzado (no había lugar de espera) |
 | `PARRB` | Porcentaje de arrepentimiento por no ingresar teniendo lugar (balking voluntario) |
 | `PARRR` | Porcentaje de arrepentimiento por abandono de cola (reneging) |
-| `PAA` 🆕 | Porcentaje de Autos Atendidos sobre los que ingresaron a la cola |
+| `PAA` | Porcentaje de Autos Atendidos sobre los que ingresaron a la cola |
 
 **Estado / auxiliares**
 
@@ -679,8 +684,8 @@ Si adoptamos **E** (o **D** + **G** + **H**), estos son los cambios mínimos a
 
 | Sigla | Significado |
 |---|---|
-| `FI` 🆕 | Factor de Impaciencia: fracción del tiempo de carga propio que el usuario tolera esperar (0,6) |
-| `CEM` 🆕 | Capacidad de Espera Máxima por estación (lugares de espera, atada a `CC(i)`) |
+| `FI` | Factor de Impaciencia: fracción del tiempo de carga propio que el usuario tolera esperar (0,6) |
+| `CEM` | Capacidad de Espera Máxima por estación (lugares de espera, atada a `CC(i)`) |
 
 **TEF**
 
