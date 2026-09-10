@@ -173,7 +173,7 @@ Este modelo plantea varias complejidades, las cuales se detallan a continuación
 
 | Evento | Evento Futuro no Condicionado | Evento Futuro Condicionado | Condición |
 |---|---|---|---|
-| Ingreso de auto a una estación (i) | Ingreso de auto a una estación (i) | Carga de auto en un cargador de una estación (i) (j) | `R ≤ PDCE / 100 && CA(i) < CD(i)` |
+| Ingreso de auto a una estación (i) | Ingreso de auto a una estación (i) | Carga de auto en un cargador de una estación (i) (j) | `R < PDCE / 100 && CA(i) ≤ CD(i)` |
 | Carga de auto en un cargador de una estación (i) (j) | – | Carga de auto en un cargador de una estación (i) (j) | `CA(i) ≥ CD(i)` |
 | Análisis de Expansión | Análisis de Expansión | Instalación de nuevo cargador (i) | `TPIC = HV && CC(i) < CC_MAX && CARRUM(i) * (RC * ECP - CCP) > CPN` |
 | | | Construcción de nueva estación | `TPCE = HV && CE < CE_MAX && PDCE * CE < 100 && CPAACUM * 4 * (RC * ECP - CCP) > CEN` |
@@ -187,10 +187,17 @@ Las dos filas de **Análisis de Expansión** corresponden a un mismo evento: dis
 condicionados distintos, cada uno con su condición.
 
 En el **Ingreso de auto a una estación (i)**, `R` es el número aleatorio uniforme en [0, 1) que se
-sortea en cada arribo y `PDCE` está expresado en porcentaje. Si `R > PDCE / 100` el vehículo no
+sortea en cada arribo y `PDCE` está expresado en porcentaje. Si `R ≥ PDCE / 100` el vehículo no
 ingresa a la estación: es demanda no capturada, no ocupa cargador, no hace cola y no cuenta como
-arrepentido en `CARRUM(i)`. Las condiciones sobre `CA(i)` se evalúan antes de dar de alta al auto que
-ingresa y después de dar de baja al que termina de cargar.
+arrepentido en `CARRUM(i)`.
+
+Las condiciones sobre `CA(i)` se evalúan **después de actualizar el vector de estado**, como
+corresponde a la metodología Evento a Evento: primero se modifica el estado por el evento actual y
+recién entonces se evalúan sus eventos futuros condicionados. En el ingreso, el auto que llega ya
+está sumado a `CA(i)`, y por eso hay cargador libre para él si `CA(i) ≤ CD(i)`; en el fin de carga,
+el auto que se retira ya está restado, y por eso queda alguien esperando si `CA(i) ≥ CD(i)`. Las dos
+condiciones no se solapan en `CA(i) = CD(i)` porque pertenecen a eventos distintos, y cuál de los dos
+está ocurriendo lo determina el mínimo de la TEF antes de evaluar cualquier condición.
 
 **Disciplina de cola dentro de la estación:** cada estación atiende con una **única cola FCFS** común a
 todos sus cargadores. El auto que espera toma el primer cargador que se libera; no se forma una fila

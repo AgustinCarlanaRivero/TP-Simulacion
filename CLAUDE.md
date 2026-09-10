@@ -91,7 +91,7 @@ disponibles (instalados y no fallados), `CC(i)` cargadores por estación, `CE` c
 
 | Evento (no condicionado) | Evento condicionado que dispara | Condición |
 |---|---|---|
-| Ingreso de auto a estación `(i)` | Carga en cargador `(i)(j)` | `R ≤ PDCE/100 && CA(i) < CD(i)` |
+| Ingreso de auto a estación `(i)` | Carga en cargador `(i)(j)` | `R < PDCE/100 && CA(i) ≤ CD(i)` |
 | Carga en cargador `(i)(j)` | Carga en cargador `(i)(j)` | `CA(i) ≥ CD(i)` |
 | Análisis de Expansión | Instalación de nuevo cargador `(i)` | `TPIC = HV && CC(i) < CC_MAX && CARRUM(i)·(RC·ECP − CCP) > CPN` |
 | Análisis de Expansión | Construcción de nueva estación | `TPCE = HV && CE < CE_MAX && PDCE·CE < 100 && CPAACUM·4·(RC·ECP − CCP) > CEN` |
