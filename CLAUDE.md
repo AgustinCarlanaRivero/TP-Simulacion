@@ -96,7 +96,15 @@ disponibles (instalados y no fallados), `CC(i)` cargadores por estación, `CE` c
 | Análisis de Expansión | Instalación de nuevo cargador `(i)` | `TPIC = HV && CC(i) < CC_MAX && CARRUM(i)·(RC·ECP − CCP) > CPN` |
 | Análisis de Expansión | Construcción de nueva estación | `TPCE = HV && CE < CE_MAX && PDCE·CE < 100 && CPAACUM·4·(RC·ECP − CCP) > CEN` |
 | Falla de cargador `(i)(j)` | Reparación de cargador `(i)(j)` | `TPRC(i)(j) = HV` |
-| Reparación / Instalación / Construcción / Mantenimiento preventivo `(i)` | — | — |
+| Reparación de cargador `(i)(j)` | Carga en cargador `(i)(j)` | `CA(i) ≥ CD(i)` |
+| Instalación de nuevo cargador `(i)` | Carga en cargador `(i)(j)` | `CA(i) ≥ CD(i)` |
+| Construcción de nueva estación / Mantenimiento preventivo `(i)` | — | — |
+
+Los eventos que suman capacidad (Reparación e Instalación) enganchan al primero de la cola si hay
+cola: repiten la condición del fin de carga, con `CD(i)` ya actualizado. La Instalación agenda además
+`TPFC(i)(j)` del cargador nuevo. La Construcción no dispara ninguna carga porque la estación nace
+vacía (`CA(i) = 0`), pero agenda los eventos propios de la estación que crea: `TPI(i)`, `TPFC(i)(j)`
+de cada uno de sus **4 cargadores** (la cantidad que supone `CPAACUM·4` en su condición) y `TPMP(i)`.
 
 ## Qué se reusa del TP 4 y qué cambia
 

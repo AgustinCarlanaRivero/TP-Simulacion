@@ -177,10 +177,10 @@ Este modelo plantea varias complejidades, las cuales se detallan a continuación
 | Carga de auto en un cargador de una estación (i) (j) | – | Carga de auto en un cargador de una estación (i) (j) | `CA(i) ≥ CD(i)` |
 | Análisis de Expansión | Análisis de Expansión | Instalación de nuevo cargador (i) | `TPIC = HV && CC(i) < CC_MAX && CARRUM(i) * (RC * ECP - CCP) > CPN` |
 | | | Construcción de nueva estación | `TPCE = HV && CE < CE_MAX && PDCE * CE < 100 && CPAACUM * 4 * (RC * ECP - CCP) > CEN` |
-| Instalación de nuevo cargador (i) | – | – | – |
-| Construcción de nueva estación | – | – | – |
+| Instalación de nuevo cargador (i) | Falla de un cargador (i) (j) | Carga de auto en un cargador de una estación (i) (j) | `CA(i) ≥ CD(i)` |
+| Construcción de nueva estación | Ingreso de auto a una estación (i); Falla de un cargador (i) (j); Mantenimiento preventivo de cargadores (i) | – | – |
 | Falla de un cargador (i) (j) | Falla de un cargador (i) (j) | Reparación de un cargador (i) (j) | `TPRC(i)(j) = HV` |
-| Reparación de un cargador (i) (j) | – | – | – |
+| Reparación de un cargador (i) (j) | – | Carga de auto en un cargador de una estación (i) (j) | `CA(i) ≥ CD(i)` |
 | Mantenimiento preventivo de cargadores (i) | Mantenimiento preventivo de cargadores (i) | – | – |
 
 Las dos filas de **Análisis de Expansión** corresponden a un mismo evento: dispara dos eventos
@@ -198,6 +198,23 @@ está sumado a `CA(i)`, y por eso hay cargador libre para él si `CA(i) ≤ CD(i
 el auto que se retira ya está restado, y por eso queda alguien esperando si `CA(i) ≥ CD(i)`. Las dos
 condiciones no se solapan en `CA(i) = CD(i)` porque pertenecen a eventos distintos, y cuál de los dos
 está ocurriendo lo determina el mínimo de la TEF antes de evaluar cualquier condición.
+
+Los eventos que **suman capacidad** —**Reparación** e **Instalación de nuevo cargador**— disparan una
+carga condicionada con la misma condición que el fin de carga y por el mismo motivo: quedó un cargador
+libre y hay que ver si alguien lo estaba esperando, con `CD(i)` ya actualizado por el evento. Sin esa
+condición, el cargador reparado o instalado queda ocioso al lado de la cola, porque cada fin de carga
+habilita una sola carga nueva: se rompe el invariante `autos cargando = min(CA(i), CD(i))` y el
+arrepentimiento sobrante se filtra a `CARRUM(i)`, que es lo que decide la instalación del cargador
+siguiente. La Instalación agenda además la primera falla del cargador que instala (`TPFC(i)(j)`), que
+si no quedaría en `HV` y ese cargador no fallaría nunca.
+
+La **Construcción de nueva estación** no dispara ninguna carga: la estación se crea vacía
+(`CA(i) = 0`), o sea que suma capacidad y cola al mismo tiempo, las dos en cero. Lo que sí genera son
+los eventos propios de esa estación, que hasta ese momento no existían: su primer arribo `TPI(i)`, la
+primera falla de cada uno de sus cargadores `TPFC(i)(j)` y su primer mantenimiento preventivo
+`TPMP(i)`. En estas tres filas, `(i)` es la estación involucrada: la del cargador reparado o
+instalado, o la que se acaba de construir. La estación se construye con **4 cargadores**, que es la
+cantidad que ya supone la condición de expansión al proyectar su facturación con `CPAACUM * 4`.
 
 **Disciplina de cola dentro de la estación:** cada estación atiende con una **única cola FCFS** común a
 todos sus cargadores. El auto que espera toma el primer cargador que se libera; no se forma una fila
