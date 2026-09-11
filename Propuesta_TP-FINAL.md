@@ -96,13 +96,15 @@ Este modelo plantea varias complejidades, las cuales se detallan a continuación
   una nueva estación. De esta forma, la cantidad de estaciones y puestos evoluciona durante la
   simulación según la demanda y la conveniencia económica de ampliar la infraestructura.
 - **Falla y mantenimiento de cargadores:** Los cargadores no poseen disponibilidad permanente. Estos
-  pueden fallar de manera aleatoria respecto a una FDP, y cuando sucede permanecen fuera de servicio
-  una cantidad de tiempo aleatoria que está dada por otra FDP (hasta completar su reparación). Además,
-  todos los cargadores reciben mantenimiento preventivo cada cierta cantidad de días (nuestra variable
-  de control "TMP"). Estos mantenimientos hacen que se vuelva a calcular el momento de la próxima
-  falla de cada uno. De esta forma, simular con distintas frecuencias de mantenimiento permite
-  analizar cómo cambian los costos, la disponibilidad de los cargadores, las esperas, el
-  arrepentimiento de los usuarios y, en consecuencia, el beneficio del sistema.
+  pueden fallar de manera aleatoria respecto a una FDP, cuyo reloj corre únicamente mientras el
+  cargador está en servicio (se cuenta desde su puesta en servicio hasta el fallo siguiente), y cuando
+  sucede permanecen fuera de servicio una cantidad de tiempo aleatoria que está dada por otra FDP
+  (hasta completar su reparación). Además, todos los cargadores reciben mantenimiento preventivo cada
+  cierta cantidad de días (nuestra variable de control "TMP"). Estos mantenimientos reparan los
+  cargadores que estén fallados y hacen que se vuelva a calcular el momento de la próxima falla de
+  cada uno. De esta forma, simular con distintas frecuencias de mantenimiento permite analizar cómo
+  cambian los costos, la disponibilidad de los cargadores, las esperas, el arrepentimiento de los
+  usuarios y, en consecuencia, el beneficio del sistema.
 
 ---
 
@@ -123,7 +125,8 @@ Este modelo plantea varias complejidades, las cuales se detallan a continuación
 - **IAF2** (Intervalo entre Arribos en el Fin de Semana entre las 13:00 y las 19:59, medido en minutos)
 - **IAF3** (Intervalo entre Arribos en el Fin de Semana entre las 20:00 y las 07:59, medido en minutos)
 - **TC** (Tiempo de Carga de un vehículo, medido en minutos)
-- **TFC** (Tiempo entre Fallas de un Cargador, medido en minutos)
+- **TFC** (Tiempo hasta el Fallo de un Cargador, contado desde su reparación hasta que vuelve a
+  fallar, medido en minutos)
 - **TRC** (Tiempo para Reparar un Cargador, medido en minutos)
 
 #### Control
@@ -161,7 +164,7 @@ Este modelo plantea varias complejidades, las cuales se detallan a continuación
 - **TPI(i)** (Tiempo de Próximo Ingreso por estación)
 - **TPC(i)(j)** (Tiempo de Próxima Carga por puesto y estación)
 - **TPAE** (Tiempo de Próximo Análisis de Expansión)
-- **TPIC** (Tiempo de Próxima Instalación de Cargador)
+- **TPIC(i)** (Tiempo de Próxima Instalación de Cargador por estación)
 - **TPCE** (Tiempo de Próxima Construcción de Estación)
 - **TPFC(i)(j)** (Tiempo de Próxima Falla de Cargador)
 - **TPRC(i)(j)** (Tiempo de Próxima Reparación de Cargador)
@@ -175,16 +178,23 @@ Este modelo plantea varias complejidades, las cuales se detallan a continuación
 |---|---|---|---|
 | Ingreso de auto a una estación (i) | Ingreso de auto a una estación (i) | Carga de auto en un cargador de una estación (i) (j) | `R < PDCE / 100 && CA(i) ≤ CD(i)` |
 | Carga de auto en un cargador de una estación (i) (j) | – | Carga de auto en un cargador de una estación (i) (j) | `CA(i) ≥ CD(i)` |
-| Análisis de Expansión | Análisis de Expansión | Instalación de nuevo cargador (i) | `TPIC = HV && CC(i) < CC_MAX && CARRUM(i) * (RC * ECP - CCP) > CPN` |
+| Análisis de Expansión | Análisis de Expansión | Instalación de nuevo cargador (i) | `TPIC(i) = HV && CC(i) < CC_MAX && CARRUM(i) * (RC * ECP - CCP) > CPN` |
 | | | Construcción de nueva estación | `TPCE = HV && CE < CE_MAX && PDCE * CE < 100 && CPAACUM * 4 * (RC * ECP - CCP) > CEN` |
 | Instalación de nuevo cargador (i) | Falla de un cargador (i) (j) | Carga de auto en un cargador de una estación (i) (j) | `CA(i) ≥ CD(i)` |
 | Construcción de nueva estación | Ingreso de auto a una estación (i); Falla de un cargador (i) (j); Mantenimiento preventivo de cargadores (i) | – | – |
-| Falla de un cargador (i) (j) | Falla de un cargador (i) (j) | Reparación de un cargador (i) (j) | `TPRC(i)(j) = HV` |
-| Reparación de un cargador (i) (j) | – | Carga de auto en un cargador de una estación (i) (j) | `CA(i) ≥ CD(i)` |
-| Mantenimiento preventivo de cargadores (i) | Mantenimiento preventivo de cargadores (i) | – | – |
+| Falla de un cargador (i) (j) | – | Reparación de un cargador (i) (j) | `TPRC(i)(j) = HV` |
+| Reparación de un cargador (i) (j) | Falla de un cargador (i) (j) | Carga de auto en un cargador de una estación (i) (j) | `CA(i) ≥ CD(i)` |
+| Mantenimiento preventivo de cargadores (i) | Mantenimiento preventivo de cargadores (i); Falla de un cargador (i) (j) | Carga de auto en un cargador de una estación (i) (j) | `CA(i) ≥ CD(i)` |
 
 Las dos filas de **Análisis de Expansión** corresponden a un mismo evento: dispara dos eventos
-condicionados distintos, cada uno con su condición.
+condicionados distintos, cada uno con su condición. Como parte de su actualización de estado, el
+análisis resetea `CARRUM(i)` y `CPAACUM`, que son acumuladores del último mes: si no volvieran a cero
+en cada análisis crecerían de forma monótona y las condiciones de expansión se irían volviendo cada
+vez más fáciles de cumplir. Cuando una expansión se dispara, el análisis agenda el evento que la
+concreta al cabo del tiempo de obra correspondiente: `TPIC(i) = T + TIC` para la instalación de un
+cargador y `TPCE = T + TCE` para la construcción de una estación. Esos dos tiempos de obra son los
+que le dan sentido a las guardas `TPIC(i) = HV` y `TPCE = HV`, que exigen que no haya una obra del
+mismo tipo ya pendiente.
 
 En el **Ingreso de auto a una estación (i)**, `R` es el número aleatorio uniforme en [0, 1) que se
 sortea en cada arribo y `PDCE` está expresado en porcentaje. Si `R ≥ PDCE / 100` el vehículo no
@@ -199,9 +209,10 @@ el auto que se retira ya está restado, y por eso queda alguien esperando si `CA
 condiciones no se solapan en `CA(i) = CD(i)` porque pertenecen a eventos distintos, y cuál de los dos
 está ocurriendo lo determina el mínimo de la TEF antes de evaluar cualquier condición.
 
-Los eventos que **suman capacidad** —**Reparación** e **Instalación de nuevo cargador**— disparan una
-carga condicionada con la misma condición que el fin de carga y por el mismo motivo: quedó un cargador
-libre y hay que ver si alguien lo estaba esperando, con `CD(i)` ya actualizado por el evento. Sin esa
+Los eventos que **suman capacidad** —**Reparación**, **Instalación de nuevo cargador** y
+**Mantenimiento preventivo de cargadores**— disparan una carga condicionada con la misma condición
+que el fin de carga y por el mismo motivo: quedó un cargador libre y hay que ver si alguien lo estaba
+esperando, con `CD(i)` ya actualizado por el evento. Sin esa
 condición, el cargador reparado o instalado queda ocioso al lado de la cola, porque cada fin de carga
 habilita una sola carga nueva: se rompe el invariante `autos cargando = min(CA(i), CD(i))` y el
 arrepentimiento sobrante se filtra a `CARRUM(i)`, que es lo que decide la instalación del cargador
@@ -212,9 +223,24 @@ La **Construcción de nueva estación** no dispara ninguna carga: la estación s
 (`CA(i) = 0`), o sea que suma capacidad y cola al mismo tiempo, las dos en cero. Lo que sí genera son
 los eventos propios de esa estación, que hasta ese momento no existían: su primer arribo `TPI(i)`, la
 primera falla de cada uno de sus cargadores `TPFC(i)(j)` y su primer mantenimiento preventivo
-`TPMP(i)`. En estas tres filas, `(i)` es la estación involucrada: la del cargador reparado o
-instalado, o la que se acaba de construir. La estación se construye con **4 cargadores**, que es la
-cantidad que ya supone la condición de expansión al proyectar su facturación con `CPAACUM * 4`.
+`TPMP(i)`. En estas filas, `(i)` es la estación involucrada: la del cargador reparado o instalado,
+la que se mantiene, o la que se acaba de construir. La estación se construye con **4 cargadores**,
+que es la cantidad que ya supone la condición de expansión al proyectar su facturación con
+`CPAACUM * 4`.
+
+El ciclo de vida de un cargador encadena **instalación → fallo, fallo → reparación, reparación →
+fallo**: `TFC` mide el tiempo hasta el fallo contado desde que el cargador entra en servicio, o sea
+que el reloj de la falla corre únicamente mientras el cargador está disponible. Por eso la **Falla**
+no agenda la falla siguiente —mientras el cargador está fuera de servicio `TPFC(i)(j) = HV`— y es la
+**Reparación** la que agenda el próximo `TPFC(i)(j)`, igual que la **Instalación** lo hace con el
+cargador que estrena.
+
+El **Mantenimiento preventivo de cargadores (i)** es instantáneo y no saca cargadores de servicio:
+repara todos los cargadores fallados de la estación —cancela sus reparaciones pendientes, con
+`TPRC(i)(j) = HV`, y sube `CD(i)`, que queda en `CC(i)`— y recalcula el `TPFC(i)(j)` de todos los
+cargadores de la estación. Como suma capacidad, dispara la misma carga condicionada que la Reparación
+y la Instalación; y como puede devolver varios cargadores a servicio de una sola vez, la condición
+`CA(i) ≥ CD(i)` se evalúa una vez por cada cargador que vuelve a estar en servicio.
 
 **Disciplina de cola dentro de la estación:** cada estación atiende con una **única cola FCFS** común a
 todos sus cargadores. El auto que espera toma el primer cargador que se libera; no se forma una fila
@@ -233,6 +259,15 @@ cola por tipo de conector; y (b) no hay reserva de turno, cuando las apps de las
 muestran disponibilidad en tiempo real y anuncian la reserva — atender por orden de llegada
 sobrestima la espera respecto de un sistema con reservas.
 
+El cambio de franja horaria no genera ningún evento en la TEI ni ninguna TEF propia, y eso supone
+que: (a) el `IA` se sortea con la FDP de la franja y el tipo de día vigentes en el momento de
+generarlo, de modo que un arribo puede terminar cayendo dentro de otra franja — se acepta ese
+desfasaje, más notorio en la franja nocturna (20:00–07:59), que es la más larga y la de intervalos más
+grandes; y (b) como no hay evento en los bordes de franja (08:00, 13:00 y 20:00), los acumuladores
+ponderados por tiempo de los resultados por franja, y el costo de la energía, que también cambia por
+franja, se calculan prorrateando cada tramo entre las franjas que atraviesa, en lugar de atribuirlo
+entero a una sola.
+
 ---
 
 ## Variables Auxiliares mencionadas
@@ -248,3 +283,10 @@ sobrestima la espera respecto de un sistema con reservas.
 - **CPN** (Costo de un Puesto Nuevo)
 - **CE_MAX** (Cantidad de Estaciones MÁXimas)
 - **CEN** (Costo de una Estación Nueva)
+- **TIC** (Tiempo de Instalación de Cargador: 1 semana, o sea 10 080 min)
+- **TCE** (Tiempo de Construcción de Estación: 6 meses, o sea 259 200 min)
+
+`TIC` y `TCE` son los tiempos de obra que transcurren entre la decisión del Análisis de Expansión y el
+evento que efectivamente suma la capacidad. Para pasarlos a minutos, que es la unidad en la que
+trabaja el modelo, se toma el mes de 30 días como convención. Se adoptan como valores fijos supuestos
+y pueden ajustarse más adelante.
