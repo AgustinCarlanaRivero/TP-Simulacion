@@ -56,7 +56,10 @@ Metodología: **evento a evento**, avance al próximo evento por mínimo de la T
    autos que ingresaron y se fueron por la cola única de la estación. Así la red capta `PDCE·CE` % de la demanda total, que es
    lo que acota la condición de construcción de estación.
 4. **Fallas y mantenimiento**: cada cargador falla según `TFC` —el reloj de la falla corre sólo
-   mientras el cargador está en servicio— y queda fuera de servicio según `TRC`.
+   mientras el cargador está en servicio— y queda fuera de servicio según `TRC`. Si la falla ocurre
+   con un auto cargando, ese auto **se pierde** (se va a la competencia): se cancela `TPC(i)(j)`,
+   baja `CA(i)` además de `CD(i)`, la carga no se factura pero su energía entregada sí computa como
+   costo, y el auto va a `CAPF(i)`, no a `CARRUM(i)` ni a `PARR`.
    Mantenimiento preventivo cada `TMP` días por estación, que **repara los cargadores fallados** y
    **recalcula la próxima falla** de cada cargador.
 5. **Estructura de costos dinámica**: precio de energía por franja (pico/valle), mantenimiento,
@@ -79,7 +82,8 @@ Metodología: **evento a evento**, avance al próximo evento por mínimo de la T
 
 **Resultado** — por franja horaria `(i)` y su promedio: `BM`/`BMP` (beneficio mensual), `PTO`/`PTOP`
 (% tiempo ocioso), `PEC`/`PECP` (% espera en cola), `PPS`/`PPSP` (permanencia en el sistema),
-`PARR`/`PARRP` (% arrepentimiento), `PDC`/`PDCP` (% disponibilidad de cargadores).
+`PARR`/`PARRP` (% arrepentimiento), `PDC`/`PDCP` (% disponibilidad de cargadores), `PAPF`/`PAPFP`
+(% autos perdidos por falla).
 
 **Estado** — `CA(i)` autos en la estación `i` (cargando + en la cola única), `CD(i)` cargadores
 disponibles (instalados y no fallados), `CC(i)` cargadores por estación, `CE` cantidad de estaciones.
@@ -87,7 +91,9 @@ disponibles (instalados y no fallados), `CC(i)` cargadores por estación, `CE` c
 **TEF** — `TPI(i)` (uno por estación, no uno global), `TPC(i)(j)`, `TPAE`, `TPIC(i)`, `TPCE` (global, sin índice), `TPFC(i)(j)`, `TPRC(i)(j)`, `TPMP(i)`.
 
 **Auxiliares** — `CARRUM(i)` (arrepentidos del último mes), `ECP` (energía cargada promedio),
-`CPAACUM` (promedio de autos atendidos por cargador en el último mes). Seguro surjan más.
+`CPAACUM` (promedio de autos atendidos por cargador en el último mes), `CAPF(i)` (autos perdidos por
+falla, acumulado de toda la corrida), `ICC(i)(j)` (instante de comienzo de la carga en curso). Seguro
+surjan más.
 
 **Constantes** — `CC_MAX`, `CE_MAX`, `CCP` (costo por carga promedio), `CPN` (costo puesto nuevo),
 `CEN` (costo estación nueva), `TIC` (tiempo de instalación de cargador: 1 semana = 10 080 min), `TCE`
@@ -120,7 +126,9 @@ de cada uno de sus **4 cargadores** (la cantidad que supone `CPAACUM·4` en su c
 Cadena de falla: **instalación → fallo, fallo → reparación, reparación → fallo**. La Falla no agenda
 la falla siguiente (mientras el cargador está fuera de servicio, `TPFC(i)(j) = HV`); la agendan la
 Reparación, la Instalación y el Mantenimiento preventivo, que además repara los fallados
-(`TPRC(i)(j) = HV` y `CD(i)` queda en `CC(i)`) sin sacar de servicio a ninguno.
+(`TPRC(i)(j) = HV` y `CD(i)` queda en `CC(i)`) sin sacar de servicio a ninguno. La Falla tampoco
+dispara ninguna carga condicionada aunque se lleve un auto: `CA(i)` y `CD(i)` bajan juntos y el
+invariante `autos cargando = min(CA(i), CD(i))` se sostiene solo.
 
 El Análisis de Expansión, como parte de su actualización de estado, **resetea `CARRUM(i)` y
 `CPAACUM`**: son acumuladores del último mes y si no vuelven a cero crecen de forma monótona y las
@@ -289,6 +297,3 @@ de arriba de entrada.
 - Segmentación del dataset por franja horaria y tipo de día para obtener las 6 FDPs de IA.
 - Valores de `CC_MAX`, `CE_MAX`, `CPN`, `CEN`, `CCP`, tarifas pico/valle y costos de mantenimiento.
 - Cantidad de notebooks: uno solo, o separar "análisis de datos y FDPs" de "motor + experimentación".
-- Qué pasa con el auto que está cargando cuando **falla ese cargador**: si vuelve a la cabecera de la
-  cola única, si se pierde, o si retoma la carga al repararse. La propuesta no lo cubre y con fila única
-  hay que definirlo (afecta `PPS`, `PARR` y `PDC`).

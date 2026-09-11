@@ -632,10 +632,11 @@ Cada etapa deja algo presentable; si nos quedamos sin tiempo, cortamos donde est
    muestra la mejora por información.
 4. **`PARR` por franja horaria.** Un auto que llega en la franja 2 y abandona en la 3, ¿en cuál
    cuenta? Propuesta: **franja de llegada**.
-5. **Falla del cargador mientras un auto está cargando** (pendiente ya listado en `CLAUDE.md`). Con
-   reneging la respuesta natural es: **vuelve a la cabecera de la cola con su paciencia remanente**;
-   si se le vence, cuenta como arrepentido. La opción "se pierde" es el caso particular de paciencia
-   remanente igual a cero. Sin modelo de paciencia esta decisión es arbitraria; con D o E sale sola.
+5. **Falla del cargador mientras un auto está cargando** — **cerrada**: el auto **se pierde**, se va
+   a la competencia. Es el caso particular de paciencia remanente igual a cero, así que la decisión
+   vale cualquiera sea el modelo de arrepentimiento que se adopte y no queda atada a esta discusión.
+   No cuenta como arrepentido: va a `CAPF(i)`, fuera de `CARRUM(i)` y de `PARR`. El detalle está en
+   [Propuesta_TP-FINAL.md](Propuesta_TP-FINAL.md).
 6. **Valor de `CEM(i)`.** ¿Fijo o proporcional a `CC(i)`? Propuesta: **2 lugares de espera por
    cargador**, para que escale con la expansión y siga siendo coherente con el argumento de espacio
    físico de `CC_MAX`.

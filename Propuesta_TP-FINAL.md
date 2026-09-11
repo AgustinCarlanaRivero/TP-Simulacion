@@ -99,7 +99,9 @@ Este modelo plantea varias complejidades, las cuales se detallan a continuación
   pueden fallar de manera aleatoria respecto a una FDP, cuyo reloj corre únicamente mientras el
   cargador está en servicio (se cuenta desde su puesta en servicio hasta el fallo siguiente), y cuando
   sucede permanecen fuera de servicio una cantidad de tiempo aleatoria que está dada por otra FDP
-  (hasta completar su reparación). Además, todos los cargadores reciben mantenimiento preventivo cada
+  (hasta completar su reparación). Si la falla sorprende a un vehículo cargando, la carga se
+  interrumpe y ese vehículo se pierde: se retira de la estación sin completar la carga y su demanda
+  queda en manos de la competencia. Además, todos los cargadores reciben mantenimiento preventivo cada
   cierta cantidad de días (nuestra variable de control "TMP"). Estos mantenimientos reparan los
   cargadores que estén fallados y hacen que se vuelva a calcular el momento de la próxima falla de
   cada uno. De esta forma, simular con distintas frecuencias de mantenimiento permite analizar cómo
@@ -137,18 +139,20 @@ Este modelo plantea varias complejidades, las cuales se detallan a continuación
 
 #### Resultado
 
-- **BM(i)** (Beneficio Mensual por franja horaria) [^i-franja]
+- **BM(i)** (Beneficio Mensual por franja horaria)
 - **PTO(i)** (Porcentaje de Tiempo Ocioso por franja horaria)
 - **PEC(i)** (Porcentaje de Espera en Cola por franja horaria)
 - **PPS(i)** (Promedio de Permanencia en el Sistema por franja horaria)
 - **PARR(i)** (Porcentaje de Arrepentimiento por franja horaria)
 - **PDC(i)** (Porcentaje de Disponibilidad de Cargadores por franja horaria)
+- **PAPF(i)** (Porcentaje de Autos Perdidos por Falla por franja horaria)
 - **BMP** (Beneficio Mensual Promedio)
 - **PTOP** (Porcentaje de Tiempo Ocioso Promedio)
 - **PECP** (Porcentaje de Espera en Cola Promedio)
 - **PPSP** (Promedio de Permanencia en el Sistema Promedio)
 - **PARRP** (Porcentaje de Arrepentimiento Promedio)
 - **PDCP** (Porcentaje de Disponibilidad de Cargadores Promedio)
+- **PAPFP** (Porcentaje de Autos Perdidos por Falla Promedio)
 
 #### Estado
 
@@ -235,6 +239,46 @@ no agenda la falla siguiente —mientras el cargador está fuera de servicio `TP
 **Reparación** la que agenda el próximo `TPFC(i)(j)`, igual que la **Instalación** lo hace con el
 cargador que estrena.
 
+**Falla con un vehículo cargando.** Si el cargador `(i)(j)` falla mientras está atendiendo, la carga
+se interrumpe y **el vehículo se pierde**: se retira de la estación sin completar la carga y su
+demanda queda en manos de la competencia. No vuelve a la cabecera de la cola ni retoma la carga
+cuando el cargador se repara. La actualización de estado de la Falla, entonces, además de restar el
+cargador de `CD(i)`, cancela el fin de carga pendiente (`TPC(i)(j) = HV`) y resta el vehículo de
+`CA(i)`. Se eligió esta alternativa sobre las otras dos —reencolar al vehículo o dejar que retome la
+carga al repararse— porque es la única que no obliga a arrastrar estado por vehículo (la fracción de
+carga ya entregada y el lugar que le corresponde en la cola única) y porque es la más conservadora:
+le pone precio a la falla, que es justamente el efecto que la variable de control `TMP` tiene que
+poder mover.
+
+Aun sacando un auto del sistema, la Falla sigue sin disparar ninguna carga condicionada. Si el
+cargador estaba atendiendo, `CA(i)` y `CD(i)` bajan los dos en uno y los autos cargando pasan de
+`min(CA(i), CD(i))` a `min(CA(i), CD(i)) − 1`, que es exactamente el que se perdió: los demás
+cargadores siguen ocupados y no queda ninguno libre para ofrecerle a la cola. Si el cargador estaba
+ocioso, `CA(i)` no cambia y ya se cumplía `CA(i) < CD(i)`. En los dos casos se mantiene el
+invariante `autos cargando = min(CA(i), CD(i))` sin que la Falla habilite una carga nueva, y por eso
+su fila en la TEI no lleva la carga condicionada que sí llevan los eventos que suman capacidad.
+
+**Contabilidad del vehículo perdido.** La carga interrumpida no se factura: el vehículo se va sin
+pagar y la estación no percibe ingreso por ella, pero sí computa como costo la energía que alcanzó a
+entregar, prorrateada entre las franjas que atraviesa el tramo como cualquier otro consumo. Esa
+energía se toma proporcional al tiempo efectivamente cargado, `E(TC) * (T − ICC(i)(j)) / TC`, donde
+`E(TC)` es la energía de la carga completa según la regresión energía–tiempo e `ICC(i)(j)` el
+instante en que empezó la carga en curso; el `TC` sorteado para esa carga se recupera como
+`TPC(i)(j) − ICC(i)(j)`, así que alcanza con guardar `ICC(i)(j)`. Se prorratea sobre la energía total
+en lugar de evaluar la regresión en el tiempo transcurrido porque esa recta tiene ordenada al origen
+negativa y daría energía negativa en las cargas interrumpidas temprano.
+
+El vehículo perdido **no cuenta como arrepentido**: no entra en `CARRUM(i)` ni en `PARR(i)`. El
+arrepentimiento mide impaciencia frente a la cola, y `CARRUM(i)` es el acumulador que decide la
+instalación de un cargador nuevo: sumarle las pérdidas por falla haría que el modelo responda a un
+problema de disponibilidad técnica comprando capacidad, cuando la palanca que le corresponde es
+`TMP`. Se contabiliza aparte en `CAPF(i)` y se reporta como `PAPF(i)` sobre los vehículos que
+ingresaron a la estación —los que pasaron el filtro `PDCE`—, de modo que atendidos, arrepentidos y
+perdidos por falla cierren el 100 % de los ingresos. A diferencia de `CARRUM(i)`, el Análisis de
+Expansión no resetea `CAPF(i)`, porque no interviene en ninguna condición. La permanencia del
+vehículo perdido sí se acumula en `PPS(i)`, contada desde su ingreso hasta la falla: estuvo en el
+sistema todo ese tiempo, aunque se haya ido sin cargar.
+
 El **Mantenimiento preventivo de cargadores (i)** es instantáneo y no saca cargadores de servicio:
 repara todos los cargadores fallados de la estación —cancela sus reparaciones pendientes, con
 `TPRC(i)(j) = HV`, y sube `CD(i)`, que queda en `CC(i)`— y recalcula el `TPFC(i)(j)` de todos los
@@ -275,6 +319,8 @@ entero a una sola.
 - **CARRUM(i)** (Cantidad de Arrepentidos del Último Mes por estación)
 - **ECP** (Energía Cargada Promedio)
 - **CPAACUM** (Cantidad Promedio de Autos Atendidos por Cargador en el Último Mes)
+- **CAPF(i)** (Cantidad de Autos Perdidos por Falla en la estación (i), acumulada en toda la corrida)
+- **ICC(i)(j)** (Instante de Comienzo de la Carga en curso en el cargador (i)(j))
 
 ## Valores Fijos mencionados
 
