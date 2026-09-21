@@ -3,6 +3,15 @@
 > **Estado:** documento de trabajo para discutir entre los cuatro. No es una decisión tomada.
 > Lo que elijamos hay que bajarlo a [Propuesta_TP-FINAL.md](Propuesta_TP-FINAL.md): siglas nuevas,
 > tabla de eventos y TEF (ver [§11](#11-qué-hay-que-tocar-en-la-propuesta)).
+>
+> **Actualización — alineado con la revisión de la calibración.** Este documento se ajustó a
+> [Calibracion_Arrepentimiento_Revision.md](Calibracion_Arrepentimiento_Revision.md). La decisión del
+> conductor se evalúa contra la longitud de la cola, así que cae el eje `IEC` de la alternativa E; el
+> mínimo `min(FI·TC, P_EAFO)` de la alternativa G queda corregido; BC Hydro pasa a ser la fuente de
+> paciencia absoluta y EAFO queda como validación externa, y se suma la alternativa **I**, que es la
+> calibración corregida. El anclaje de `FI` a esas dos fuentes también se corrigió: hay que tomar la
+> media entre los que esperan, no la media total, porque el segmento que no espera ya lo modela `PNE`
+> y contarlo dos veces achica la paciencia por debajo de lo que dicen las encuestas.
 
 ---
 
@@ -15,20 +24,22 @@ hardcodeada del TP 4, que además **no se puede portar tal cual** al esquema de 
 como se ve en [§3.3](#33-el-93--del-tp-4-es-una-lectura-equivocada-del-paper), está apoyada en una
 lectura equivocada de la fuente.
 
-Ocho alternativas sobre la mesa, ordenadas de menos a más ambiciosa:
+Nueve alternativas sobre la mesa, ordenadas de menos a más ambiciosa:
 
 | # | Alternativa | Mecanismo | Esfuerzo | Veredicto |
 |---|---|---|---|---|
 | **A** | Umbral por longitud de cola (TP 4 corregido) | Balking voluntario | Bajo | Sirve sólo como **baseline** para comparar |
 | **B** | Probabilidad continua en la longitud de cola | Balking voluntario | Bajo | Mejor que A, pero sin anclaje empírico |
 | **H** | Cola finita: se llena y no entra nadie más | Balking **forzado** | Muy bajo | **Hacerlo sí o sí**, es independiente del resto |
-| **C** | Paciencia empírica vs. espera estimada | Balking voluntario | Medio | **Recomendada** como núcleo |
-| **G** | Paciencia proporcional al tiempo de carga propio | Paciencia | Bajo | **Recomendada** junto con C: una acota a la otra |
+| **C** | Paciencia empírica vs. espera estimada | Balking voluntario | Medio | Es el mecanismo del núcleo; con paciencia absoluta degenera |
+| **G** | Paciencia proporcional al tiempo de carga propio | Paciencia | Bajo | Da la escala del núcleo; sola, sobrestima la paciencia |
+| **I** | Paciencia relativa con piso de no-espera (calibración corregida) | Balking voluntario | Medio | **Recomendada** como núcleo: C con la escala de G |
 | **D** | Paciencia como reloj: abandono en cola | Reneging | Medio-alto | **Recomendada**; habilita validar contra Erlang-A |
-| **E** | Híbrido C+D+G con/sin información al usuario | Todos | Alto | **Objetivo final**; agrega un eje experimental gratis |
+| **E** | Híbrido H + I + D: las tres decisiones con una sola paciencia | Todos | Alto | **Objetivo final** |
 | **F** | Población heterogénea de perfiles | Se monta sobre C/D/E | Medio | Opcional; con fórmulas tomadas de la bibliografía |
 
-**Recomendación:** ir a **E**, construido por etapas (**H → A → D → G+C → E**), porque cada etapa deja
+**Recomendación:** ir a **E**, construido por etapas (**H → A → D → I**; con I montada sobre las
+anteriores, el modelo ya es E), porque cada etapa deja
 un resultado presentable aunque nos quedemos sin tiempo. Detalle en
 [§9](#9-recomendación-y-plan-por-etapas).
 
@@ -110,12 +121,19 @@ artificialmente el arrepentimiento relativo**, que es justo la decisión que el 
 
 **(c) Ignora el tiempo, que es la variable de decisión real.** Un auto no decide por "cuántos hay
 adelante" sino por "cuánto voy a esperar". Con `TC` ~ Gumbel(84,39; 60,19) — media ≈ 119 min sin
-truncar — un solo auto adelante ya son **dos horas** de espera. La regla por longitud de cola no
-distingue entre esperar detrás de un auto que arranca y uno que está por terminar, y sobre todo **no
-reacciona a las fallas ni al mantenimiento**: si se cae un cargador, la espera se duplica y la regla
-por longitud no se entera. Como `TMP` es una de nuestras tres variables de control, esto es grave:
-con un modelo de balking por longitud, **`TMP` casi no puede mover `PARR`**, y el análisis de
+truncar — un solo auto adelante ya son **dos horas** de espera. Un umbral fijo sobre la cola **no
+reacciona a las fallas ni al mantenimiento**: si se cae un cargador, la espera se duplica y el umbral
+no se entera. Como `TMP` es una de nuestras tres variables de control, esto es grave:
+con un umbral fijo sobre la cola, **`TMP` casi no puede mover `PARR`**, y el análisis de
 sensibilidad de mantenimiento se queda sin efecto que medir.
+
+El reproche es al **umbral fijo** sobre `q(i)`, no a decidir por longitud de cola. Una regla que
+traduce la cola a minutos con `CD(i)` adentro —`W(q) = (q(i) + 1) / CD(i) · E[TC]`, alternativas C e
+I— sí reacciona: cuando se cae un cargador, la misma cola da más minutos y `PARR` sube sin recalibrar
+nada. Y que la regla no distinga entre esperar detrás de un auto que arranca y uno que está por
+terminar **no es un defecto**: el conductor tampoco lo ve desde el auto, así que el modelo no tiene
+que verlo
+([revisión §6](Calibracion_Arrepentimiento_Revision.md#6-la-premisa-corregida-el-que-no-ve-el-tiempo-es-el-conductor)).
 
 ### 3.3. El 93 % del TP 4 es una lectura equivocada del paper
 
@@ -144,7 +162,9 @@ estación mucho más saturada que la nuestra.
 
 | Fuente | Qué nos da | Cómo se usa |
 |---|---|---|
-| **EAFO Consumer Monitor 2023** (Comisión Europea) | Distribución empírica de espera tolerada por conductores de BEV | Es la **FDP de paciencia** en valor absoluto |
+| **EAFO Consumer Monitor 2023** (Comisión Europea) | Distribución empírica de espera tolerada por conductores de BEV | **Validación externa** y extremo del barrido de I: su media entre los que esperan ancla `FI = 0,34` y su 31 % es el techo del piso de no-espera |
+| **BC Hydro, informe del primer año** (2025) | Espera máxima que el usuario **está dispuesto** a tolerar, zona urbana y no urbana | **Fuente de paciencia absoluta**; por ser 85 % carga rápida, es cota impaciente: ancla `FI = 0,16` (media entre los que esperan) y el piso de 12–17 % |
+| **Hanni, Yamamoto & Nakamura** (*Sustainability*, 2024) | Espera aceptable **con el cargador ocupado al llegar**, separada en carga normal y rápida | Fija la **dirección y la forma** de la paciencia, no sus niveles |
 | **IDEAS** (Chattopadhyay & Kar, arXiv 2403.06223) | Balking forzado / voluntario / reneging; **paciencia proporcional al tiempo de carga propio** (`z = 0,6`); estimadores de espera por perfil; efecto de informar la espera | Núcleo del modelo de comportamiento y escalera de escenarios |
 | **Alsabbagh, Wu & Ma** (IEEE TII, 2020) | *Time anxiety*: la impaciencia crece con el tiempo transcurrido; cuatro perfiles y tres formas funcionales (log, lineal, exponencial) | Forma de la curva de impaciencia y mezcla de perfiles |
 | **ACN-Data** (vía IDEAS, figs. 3 y 4) | Duración de carga más frecuente **entre 100 y 200 min**; horas activas 07–23 con picos **09–10 y 14–19** | **Corrobora dos supuestos nuestros**: el `TC` medio ≈ 119 min y el corte de franjas 08–13 / 13–20 / 20–08 |
@@ -169,7 +189,10 @@ Tres lecturas que hay que hacer explícitas si usamos esto:
    Esto solo ya cambia la conclusión económica del TP.
 2. **Está censurada a derecha.** La pregunta es "cuánto esperaste", no "cuánto tolerarías": quien
    nunca se encontró con una cola larga reporta poco aunque su paciencia sea alta. Es decir, la
-   distribución **subestima** la paciencia real. Es un supuesto a declarar, no a esconder.
+   distribución **subestima** la paciencia real. Es un supuesto a declarar, no a esconder. BC Hydro
+   pregunta directamente cuánto se toleraría y corrige esta debilidad
+   ([§4.4](#44-las-fuentes-nuevas-bc-hydro-y-hanni-et-al)): por eso EAFO pasa a ser validación
+   externa y no insumo.
 3. **Es Europa, no CABA.** Mismo problema que ya asumimos con el dataset de California. El rango
    entre países del "15 minutos o menos" va de **10 % (Lituania) a 42 % (Francia)**: sirve como
    rango de sensibilidad razonable en vez de inventar uno.
@@ -195,8 +218,12 @@ Y el usuario abandona cuando el tiempo ya esperado supera ese umbral (ec. 13 del
 
 **Los dos datos se contradicen, y por mucho.** Con nuestro `TC` (media ≈ 119 min, mediana ≈ 107 min),
 `z · TC` da paciencias de **~64 a ~71 min**, contra los **~15 min** que sugiere la mediana de EAFO.
-Un factor 4. No es un detalle: define si el modelo da 20 % o 70 % de arrepentimiento. En
-[§5.G](#g-paciencia-proporcional-al-tiempo-de-carga-propio) está la propuesta para resolverlo.
+Un factor 4. No es un detalle: con los cuatro cargadores iniciales ocupados y la cola vacía, las
+tablas absolutas dan un `PARR` de 81 % (EAFO) a 95 % (BC Hydro), y `FI·TC` da 16 %
+([revisión §3.1](Calibracion_Arrepentimiento_Revision.md#31-los-números-con-nuestro-tc-no-con-el-del-ejemplo)).
+Hanni et al. (2024) muestra que ninguno de los dos extremos aguanta
+([§4.4](#44-las-fuentes-nuevas-bc-hydro-y-hanni-et-al)). La propuesta para resolverlo está en
+[§5.I](#i-paciencia-relativa-con-piso-de-no-espera-calibración-corregida--recomendada-como-núcleo).
 
 ### 4.3. Los resultados de IDEAS (Tabla II) y sus tres contra-intuiciones
 
@@ -213,7 +240,9 @@ Tres resultados que valen para nosotros aunque los niveles no sean transferibles
    (93,1 → 97,1 %) pero el reneging cae **–91 %** (3,94 → 0,35 %) y **el porcentaje de servidos se
    duplica** (37,1 → 74,6 %). La información no retiene más clientes: **los ordena**. El que iba a
    ocupar un lugar para irse igual, ahora directamente no entra, y el lugar queda para alguien que sí
-   va a cargar.
+   va a cargar. En nuestro modelo este escenario no se corre: el conductor decide con lo que ve desde
+   el auto, y la espera informada queda como limitación declarada
+   ([§6](#6-aparte-dos-palancas-que-quedan-fuera-de-alcance)).
 2. **Menos balking no es mejor.** El caso sin decisión del usuario (`BlockingFC`) tiene menos balking
    pero más reneging y menos servidos. Textual: *"los escenarios con menor porcentaje de balking no
    necesariamente aseguran mayor porcentaje de tráfico servido"*. Bajar `PARR` no puede ser el
@@ -222,6 +251,43 @@ Tres resultados que valen para nosotros aunque los niveles no sean transferibles
    los menos pacientes, la cola se auto-selecciona hacia usuarios de carga larga: el throughput puede
    verse bien mientras el servicio es malo. Esto tiene consecuencias directas sobre nuestro `BM` y
    nuestro `ECP` — ver [§7](#7-efectos-de-segundo-orden-que-hay-que-anticipar).
+
+### 4.4. Las fuentes nuevas: BC Hydro y Hanni et al.
+
+**BC Hydro** pregunta lo que el modelo necesita —*cuánto estás dispuesto a esperar*—, no cuánto
+esperaste, así que no arrastra la censura de EAFO. Tabla urbana de la encuesta de noviembre de 2024
+(pregunta 11d), con los tramos corregidos contra el informe
+([revisión §11](Calibracion_Arrepentimiento_Revision.md#11-sobre-las-fuentes)):
+
+| Máximo que está dispuesto a esperar | % |
+|---|---:|
+| Nada | 17 % |
+| 5 min | 29 % |
+| 10 min | 30 % |
+| 15 min | 1 % |
+| 20–30 min | 18 % |
+| Más de 30 min | 5 % |
+
+La media es 16,0 min, y en zona no urbana el piso baja a 12 %. La salvedad es la tecnología: 499 de
+sus 591 puertos son de carga rápida, así que es paciencia medida frente a sesiones cortas. Sirve como
+**cota impaciente**, no como valor central para un dataset de carga de destino como el nuestro.
+
+**Hanni et al. (2024)** es la fuente mejor alineada con nuestro punto de decisión: pregunta por la
+espera tolerable *cuando el cargador está ocupado al llegar*, y separa carga normal de rápida. Tres
+resultados:
+
+1. **Con carga normal la paciencia sube, pero poco**: del orden de ×1,6 en odds, no un factor de
+   cuatro. Ninguno de los dos extremos aguanta: la tabla absoluta de carga rápida subestima la
+   paciencia en un contexto de carga de destino, y `FI·TC` la sobrestima.
+2. **La moda es "no esperar nada"** en todas las ubicaciones y para los dos tipos de carga: el
+   segmento que no espera existe también en carga normal.
+3. **La tolerancia declarada queda por debajo de la espera que efectivamente aguantaron**, así que las
+   tres tablas empujan `PARR` hacia arriba por construcción. Es un argumento más para tratar el piso
+   como rango y no como punto.
+
+No publica las proporciones por tramo —están sólo en un gráfico—, así que fija dirección y forma, no
+números. El detalle está en la
+[revisión §5.5](Calibracion_Arrepentimiento_Revision.md#55-hanni-et-al-2024-no-es-una-fuente-complementaria).
 
 ---
 
@@ -276,7 +342,11 @@ P(arrepentirse | q) = 1 - e^(-BETA * q / CD(i))
 - **Pros:** un parámetro, sin discontinuidades; escala solo con `CD(i)`; el barrido de `BETA` da una
   curva de sensibilidad limpia; y tiene cita bibliográfica.
 - **Contras:** `BETA` no sale de ningún dato; sigue ignorando el tiempo y por lo tanto las fallas y
-  `TMP`. Es "A pero prolijo", no un modelo mejor.
+  `TMP`. Es "A pero prolijo", no un modelo mejor. Además vale 0 en `q = 0`: con todos los cargadores
+  ocupados y la cola vacía —el estado congestionado más frecuente— no se arrepiente nadie, y eso choca
+  con el piso empírico de no-espera. El agujero es de la forma funcional misma (`b_0 = e^0 = 1` en
+  Zhang et al. 2025), no de cómo se la adapte
+  ([revisión §4.4](Calibracion_Arrepentimiento_Revision.md#44-el-piso-en-q--0-no-es-un-caso-de-borde)).
 
 ---
 
@@ -315,13 +385,13 @@ estacionamiento no pasa.
 
 ---
 
-### C. Paciencia empírica vs. espera estimada — *recomendada como núcleo*
+### C. Paciencia empírica vs. espera estimada
 
 **Idea.** Cada auto que llega sortea su tolerancia `TMEU`, estima cuánto va a esperar, y se arrepiente
 si la espera estimada supera su tolerancia.
 
 ```
-TMEU     ~ F_paciencia          # 31 % en 0; el resto por tramos (EAFO)
+TMEU     ~ F_paciencia          # 17 % en 0; el resto por tramos (BC Hydro, §4.4)
 W_est(i)  = (q(i) + 1) / CD(i) * E[TC]
 se arrepiente  <=>  W_est(i) > TMEU
 ```
@@ -341,24 +411,37 @@ donde `N` es la cantidad de autos que el usuario "ve" y `f` un factor de perfil 
 > **generar `TC` en el evento de arribo y no al empezar a cargar**, como hace hoy el motor del TP 4.
 > Es un cambio chico pero hay que hacerlo antes, no después.
 
-- **Datos que necesita:** la tabla de EAFO + una decisión sobre cómo repartir dentro de cada tramo
-  (uniforme es lo más honesto) y un tope para el "más de 1 hora".
+- **Datos que necesita:** la tabla de BC Hydro con los tramos corregidos
+  ([§4.4](#44-las-fuentes-nuevas-bc-hydro-y-hanni-et-al)) + una decisión sobre cómo repartir dentro
+  de cada tramo (uniforme es lo más honesto) y un tope para el "más de 30 min". EAFO queda como
+  validación externa.
 - **Cambios en la propuesta:** una FDP nueva (`TMEU`) en Datos. **No agrega eventos ni TEF.**
 - **Pros:**
   - Se apoya en un dato empírico publicado y citable.
-  - Un solo mecanismo produce el piso del 31 % *y* la sensibilidad a la congestión.
+  - Un solo mecanismo produce el piso de no-espera (17 % en BC Hydro, 31 % en EAFO) *y* la
+    sensibilidad a la congestión.
   - **Reacciona a la capacidad y a las fallas**: si cae un cargador, `CD(i)` baja, `W_est` sube y
     `PARR` sube. Recién acá `TMP` tiene un canal por el que afectar el arrepentimiento.
   - `PARR` queda en las mismas unidades que `PEC`, que es lo que el informe compara.
 - **Contras:**
-  - Hay que asumir cómo estima el usuario la espera; `W_est` ignora el tiempo residual del que ya
-    está cargando (sobreestima un poco). Es un supuesto a declarar.
-  - El dato es europeo y está censurado a derecha ([§4.1](#41-el-dato-de-eafo-paciencia-en-valor-absoluto)).
+  - Hay que asumir cómo estima el usuario la espera. `W_est` ignora el tiempo residual del que ya
+    está cargando y sobreestima la espera: con nuestra Gumbel, `W(0)` da 30,4 min contra ≈ 21 min
+    descontando el remanente de equilibrio. **No es un defecto a corregir**: el conductor tampoco ve
+    el remanente, así que ese sesgo es conducta modelada, y la versión corregida queda como cota de
+    sensibilidad. En su forma con `E[TC]`, además, `W_est` es la espera condicional exacta de una
+    M/M/c, y conviene citarla así
+    ([revisión §5.3](Calibracion_Arrepentimiento_Revision.md#53-wq-tiene-mejor-pedigrí-del-que-el-documento-le-atribuye)).
+  - BC Hydro es 85 % carga rápida: su tabla es una cota impaciente, no un valor central para carga
+    de destino ([§4.4](#44-las-fuentes-nuevas-bc-hydro-y-hanni-et-al)).
   - Sigue siendo **sólo balking**: nadie abandona después de haber esperado, y por lo tanto la cola
     nunca se descomprime sola.
-  - Con `TC` medio ≈ 119 min y paciencias de 15–30 min, **cualquier** cola genera arrepentimiento
-    casi total. Hay que anticiparlo y explicarlo, no descubrirlo en los resultados. Es el problema
-    que corrige la alternativa G.
+  - Con `TC` medio ≈ 121 min y paciencias absolutas de 15–30 min, el modelo degenera: con los cuatro
+    cargadores ocupados y **la cola vacía**, `PARR` ya da 95 % con BC Hydro y 81 % con EAFO. La
+    estación pasa a comportarse como un sistema de pérdida, `CARRUM(i)` dispara la expansión todos
+    los meses y `TMP` se queda sin efecto que mover
+    ([revisión §3](Calibracion_Arrepentimiento_Revision.md#3-el-problema-de-fondo-la-escala)). Es el
+    problema que corrige la alternativa
+    [I](#i-paciencia-relativa-con-piso-de-no-espera-calibración-corregida--recomendada-como-núcleo).
 
 ---
 
@@ -371,16 +454,14 @@ propio usuario, como hace IDEAS:
 TMEU_k = FI * TC_k                  con FI = 0,6 (Factor de Impaciencia)
 ```
 
-**Propuesta concreta para resolver la contradicción con EAFO** ([§4.2](#42-el-dato-de-ideas-paciencia-relativa-a-la-propia-necesidad)):
-usar las dos, con la absoluta como techo.
-
-```
-TMEU_k = min( FI * TC_k , P_k )     con P_k ~ EAFO
-```
-
-Lectura: *el usuario espera en proporción a lo que necesita cargar, pero nunca más allá de su
-tolerancia personal.* Los dos casos puros (`FI·TC` solo, EAFO sola) quedan como **cotas del análisis
-de sensibilidad**, que es una forma honesta de manejar que las dos fuentes no coincidan.
+**Cómo se combina con la paciencia absoluta** ([§4.2](#42-el-dato-de-ideas-paciencia-relativa-a-la-propia-necesidad)).
+El mínimo `min(FI·TC_k, P_k)` no resuelve la contradicción: se queda con la paciencia chica, que es
+justamente la que hace degenerar el modelo
+([revisión §9](Calibracion_Arrepentimiento_Revision.md#9-qué-proponemos-hacer)). La combinación que sí
+la resuelve es la alternativa
+[I](#i-paciencia-relativa-con-piso-de-no-espera-calibración-corregida--recomendada-como-núcleo): la
+forma relativa como modelo, con las tablas absolutas traducidas a `FI` como extremos del barrido y el
+segmento que no espera tratado aparte.
 
 - **Datos que necesita:** ninguno nuevo. `TC` ya lo tenemos ajustado; `FI` es un parámetro con valor
   de referencia publicado (0,6).
@@ -398,7 +479,88 @@ de sensibilidad**, que es una forma honesta de manejar que las dos fuentes no co
   - En IDEAS, `T(i, SoC, 80 %)` es el tiempo hasta el 80 % de carga; nuestro `TC` es la sesión
     completa del dataset. Aplicar `FI` sobre `TC` **sobrestima** la paciencia. Hay que declararlo, o
     corregir con un factor.
-  - Sola, no reproduce el 31 % que se va sin esperar: **por eso va combinada con C**, no en su lugar.
+  - Hanni et al. (2024) confirma la dirección con datos: con carga normal la paciencia sube, pero
+    mucho menos que proporcionalmente al tiempo de carga
+    ([§4.4](#44-las-fuentes-nuevas-bc-hydro-y-hanni-et-al)). Con `FI = 0,6`, G sola es la cota
+    paciente, no el valor central.
+  - Sola, no reproduce el segmento que se va sin esperar (17 % en BC Hydro, 31 % en EAFO): **por eso
+    la alternativa I le suma un piso explícito**.
+
+---
+
+### I. Paciencia relativa con piso de no-espera (calibración corregida) — *recomendada como núcleo*
+
+**Origen.** Es lo que queda de [Calibracion_Arrepentimiento_EV.md](Calibracion_Arrepentimiento_EV.md)
+después de la [revisión](Calibracion_Arrepentimiento_Revision.md). Aquella proponía la forma
+exponencial de B calibrada con la cadena de C —`q → W(q) → P(TMEU < W(q))`, con un ajuste de `α`
+encima— y BC Hydro como fuente de paciencia. La revisión saca el ajuste de `α`, porque
+`P(TMEU < W(q))` ya es el modelo exacto y comprimirlo en una exponencial sólo agrega error
+([revisión §4](Calibracion_Arrepentimiento_Revision.md#4-defectos-concretos-de-la-formulación)), y
+resuelve la escala, que con nuestro `TC` era lo que hacía degenerar todo. Lo que queda es C con la
+escala de G y el segmento que no espera explícito.
+
+**Idea.** Cada auto trae su `TC` desde el arribo y sortea a qué segmento pertenece:
+
+```
+con probabilidad PNE:  TMEU_k = 0                   # no espera nunca
+si no:                 TMEU_k = FI * TC_k           # paciencia relativa (G)
+
+W_est(i) = (q(i) + 1) / CD(i) * E[TC]               # lo que el conductor infiere desde el auto
+se arrepiente  <=>  CA(i) >= CD(i)  &&  W_est(i) > TMEU_k     # CA(i) sin contar al que llega
+```
+
+- **La espera se estima con la longitud de la cola — decisión cerrada.** El conductor ve cuántos
+  autos esperan y cuántos cargadores hay en servicio; no ve cuánto le falta a cada carga en curso.
+  Los remanentes de la TEF quedan fuera del modelo de decisión aunque el motor los tenga: usarlos
+  sería simular otro sistema
+  ([revisión §6](Calibracion_Arrepentimiento_Revision.md#6-la-premisa-corregida-el-que-no-ve-el-tiempo-es-el-conductor)).
+- **El estimador es el ingenuo**, sin descontar el remanente de la carga en curso, porque es lo que
+  hace el conductor. La versión con el remanente de equilibrio de la Gumbel (84,4 min en lugar de
+  121,4) queda como cota de sensibilidad.
+- **`E[TC]` y no el `TC` propio en `W_est`.** Si las dos puntas usaran `TC_k`, se cancelaría: la regla
+  quedaría `(q(i) + 1) / CD(i) > FI`, un umbral fijo —la alternativa A con otro nombre— y se perdería
+  la heterogeneidad que aporta G.
+- **`FI` se barre entre tres anclajes empíricos**: 0,16 (media de BC Hydro entre los que esperan,
+  19,3 min sobre 121,4), 0,34 (media de EAFO entre los que esperan, 41,7 min) y 0,60 (IDEAS). Se
+  excluyen los ceros de cada media porque ese segmento ya lo modela `PNE` aparte. Las tablas absolutas
+  dejan de ser una alternativa a la forma relativa y pasan a ser los extremos impacientes de su
+  barrido, que es la lectura que sostiene Hanni et al.
+  ([§4.4](#44-las-fuentes-nuevas-bc-hydro-y-hanni-et-al)). Es un anclaje de **medias**, no una
+  equivalencia de distribuciones.
+- **`PNE` se barre entre 12 % y 31 %**: BC Hydro no urbano, BC Hydro urbano (17 %) y EAFO. Escrito
+  así es un **modelo de mezcla**, que es una construcción estándar, y tapa el agujero que la
+  exponencial de B tiene en `q = 0`
+  ([revisión §4.4](Calibracion_Arrepentimiento_Revision.md#44-el-piso-en-q--0-no-es-un-caso-de-borde)).
+- **`TMEU` se sortea por auto**, no como moneda por arribo: el segmento que no espera queda como
+  propiedad del auto, y así se lo puede seguir en los resultados.
+
+- **Datos que necesita:** ninguno nuevo. `TC` ya está ajustado, y los anclajes de `FI` y `PNE` salen
+  de BC Hydro (tabla corregida), EAFO e IDEAS.
+- **Cambios en la propuesta:** dos constantes (`FI`, `PNE`) y la fila del ingreso desdoblada
+  ([revisión §7.7](Calibracion_Arrepentimiento_Revision.md#77-qué-habría-que-tocar-en-la-propuesta)).
+  **No agrega eventos ni TEF.**
+- **Pros:**
+  - Produce un gradiente utilizable. Con `FI = 0,6` y `CD = 4`, de los que no pertenecen al segmento
+    que no espera se arrepiente el 16 % con la cola vacía, el 46 % con un auto adelante y el 72 % con
+    dos
+    ([revisión §3.1](Calibracion_Arrepentimiento_Revision.md#31-los-números-con-nuestro-tc-no-con-el-del-ejemplo)).
+    Con las tablas absolutas, en cambio, se va casi todo el mundo desde `q = 0`.
+  - Reacciona a `CD(i)`: una falla, un mantenimiento o una expansión mueven `PARR` sin recalibrar
+    nada. `TMP` conserva el canal por el que afectar el arrepentimiento.
+  - Cada parámetro tiene un rango con respaldo empírico en lugar de un valor inventado.
+  - La decisión es instantánea en el arribo: no hay ambigüedad de franja horaria (decisión 4 de
+    [§10](#10-decisiones-que-tenemos-que-cerrar-entre-los-cuatro)).
+- **Contras:**
+  - Ningún punto del barrido es *el* valor: `FI·TC` sobrestima la paciencia y las tablas absolutas,
+    medidas frente a carga rápida, la subestiman. El resultado es un rango, y el criterio de éxito no
+    es que `PARR` se mueva poco sino que **la conclusión económica no se dé vuelta entre las cotas**.
+  - Anclar `FI` por la media no reproduce la forma de las tablas absolutas.
+  - Es sólo balking: no descomprime la cola (hace falta H) y no tiene fórmula cerrada contra la cual
+    validar. Aunque el modelo final no lleve reneging, D tiene que quedar implementada en modo
+    degenerado para contrastar el motor contra Erlang-A
+    ([revisión §7.3](Calibracion_Arrepentimiento_Revision.md#73-se-pierde-la-única-validación-externa-disponible)).
+  - Como la paciencia correlaciona con `TC`, arrastra el sesgo de selección sobre `ECP` de
+    [§7](#7-efectos-de-segundo-orden-que-hay-que-anticipar).
 
 ---
 
@@ -412,7 +574,7 @@ TEF:                    TPAB(i) = min_k TAB(i)(k)
 evento nuevo:           "Arrepentimiento de auto en cola (i)"
 ```
 
-- **Datos que necesita:** la misma `TMEU` de C y/o G.
+- **Datos que necesita:** la misma `TMEU` de C, G o I.
 - **Cambios en la propuesta:** **una fila nueva en la tabla de eventos y una entrada nueva en la
   TEF.** Además `CA(i)` deja de alcanzar como estado: hay que llevar la cola con los vencimientos.
 - **Pros:**
@@ -428,6 +590,10 @@ evento nuevo:           "Arrepentimiento de auto en cola (i)"
     Nuestra formulación (vencimiento por auto) ya lo hace: conviene decirlo en el informe, es un punto
     a favor del modelo.
   - `PARR` y `PEC` quedan consistentes: el que abandona **efectivamente esperó**.
+  - No choca con la decisión de evaluar contra la longitud de la cola: el conductor no ve el tiempo
+    **remanente**, pero el tiempo **transcurrido** sí lo vive, así que el reloj de paciencia es
+    legítimo
+    ([revisión §6](Calibracion_Arrepentimiento_Revision.md#6-la-premisa-corregida-el-que-no-ve-el-tiempo-es-el-conductor)).
   - Reacciona a fallas, a `TMP` y a la expansión por el canal correcto (el tiempo real de espera).
 - **Contras:**
   - Más máquina: estado por auto en cola, más eventos por corrida, motor más lento.
@@ -445,7 +611,7 @@ evento nuevo:           "Arrepentimiento de auto en cola (i)"
 
 ---
 
-### E. Híbrido: balking + reneging, con y sin información — *objetivo final*
+### E. Híbrido: balking forzado, balking voluntario y abandono con una sola paciencia — *objetivo final*
 
 **Idea.** Las tres decisiones con una sola paciencia, que es lo que hace IDEAS:
 
@@ -453,30 +619,15 @@ evento nuevo:           "Arrepentimiento de auto en cola (i)"
 2. **Si hay lugar, ¿vale la pena?** Estima `W_est` y hace balking voluntario si `W_est > TMEU`.
 3. **Si entra:** conserva la paciencia y abandona si la espera real supera `TMEU`.
 
-Y arriba de eso, una variable de control nueva `IEC` (Información de Espera al Cliente):
-
-- `IEC = 0`: el usuario estima a ojo con la cola visible (`W_est` sesgado). IDEAS lo llama
-  **AWT** (*Assumed Wait Time*).
-- `IEC = 1`: la estación publica la espera real calculada con los tiempos remanentes de carga.
-  **EWT** (*Estimated Wait Time*).
-
-IDEAS muestra que la diferencia entre AWT y EWT no está tanto en el promedio sino en la
-**varianza**: el AWT tiene varianza mucho más alta, y esa incertidumbre es la que genera el reneging.
-Buena métrica para el informe: comparar la varianza de la espera estimada, no sólo su media.
+Con la paciencia y el estimador de la alternativa I, E es **H + I + D**; sin reneging, se reduce a
+H + I. No lleva eje de información al cliente: la decisión se toma contra la longitud de la cola, y
+la espera informada queda fuera de alcance ([§6](#6-aparte-dos-palancas-que-quedan-fuera-de-alcance)).
 
 - **Pros:**
   - El más realista y el que mejor cierra con la bibliografía.
-  - **Regala un cuarto eje experimental que no cuesta plata:** informar la espera es una política
-    operativa gratis frente a construir un cargador (`CPN`) o una estación (`CEN`). Con números
-    del paper: reneging **−91 %** y porcentaje de servidos **×2** (37 → 75 %). Si reproducimos aunque
-    sea la dirección del efecto, es la conclusión más interesante que puede tener el TP: *hay una
-    palanca de eficiencia que no es capital*.
   - Permite descomponer `PARR` en `PARRF` (forzado), `PARRB` (voluntario) y `PARRR` (abandono), que
-    es información directa para la expansión: el forzado se cura con capacidad, el voluntario en
-    parte con capacidad, y parte del abandono se cura con información.
-  - **Cuidado con la lectura de los resultados:** informar la espera **sube** el balking. Si
-    tomamos `PARR` como métrica de éxito, el escenario informado va a "empeorar" mientras el negocio
-    mejora. Hay que reportar también el **porcentaje de autos efectivamente atendidos** y `BM`.
+    es información directa para la expansión: el forzado se cura con capacidad, el voluntario sólo
+    en parte.
 - **Contras:**
   - Riesgo real de **doble conteo** de la impaciencia si no se cuida que la paciencia sea *la misma*
     variable en las tres decisiones.
@@ -484,6 +635,8 @@ Buena métrica para el informe: comparar la varianza de la espera estimada, no s
     mal sin tirar excepción.
   - `PARR` deja de ser un número y pasa a ser tres; hay que rehacer la definición de la variable de
     resultado en la propuesta.
+  - Con reneging vuelve la ambigüedad de franja horaria (decisión 4 de
+    [§10](#10-decisiones-que-tenemos-que-cerrar-entre-los-cuatro)).
 
 ---
 
@@ -528,16 +681,28 @@ anotado como limitación en la discusión del informe, no como modelo.
 
 ---
 
-## 6. Aparte: la palanca que no es capital ni información
+## 6. Aparte: dos palancas que quedan fuera de alcance
 
-Además de informar la espera, IDEAS propone un **cargador de dos modos y dos bocas**: carga rápida
+Dos políticas operativas que muestra la bibliografía y que el modelo deja afuera. Las dos van a la
+discusión del informe como limitación declarada y línea futura.
+
+**Informar la espera.** Una red puede publicar en su app una estimación de la espera, e IDEAS muestra
+que eso ordena la demanda: el balking sube, el reneging cae −91 % y el porcentaje de servidos se
+duplica ([§4.3](#43-los-resultados-de-ideas-tabla-ii-y-sus-tres-contra-intuiciones)). Nuestro
+conductor decide con lo que ve desde el auto
+([revisión §6](Calibracion_Arrepentimiento_Revision.md#6-la-premisa-corregida-el-que-no-ve-el-tiempo-es-el-conductor)),
+así que modelar esa política queda fuera de alcance. Lo que se deja afuera es la política, no su
+existencia: el tiempo exacto no lo puede publicar nadie —depende de los `TC` de los autos que todavía
+están en cola—, pero una estimación sí.
+
+**Cargador de dos modos.** IDEAS propone además un **cargador de dos modos y dos bocas**: carga rápida
 hasta el 80 % de SoC y, pasado ese punto, la boca conmuta a modo lento y **libera la potencia rápida
 para otro auto en la segunda boca**. El fundamento es la curva de carga de litio: pasar de 80 % a
 100 % tarda casi lo mismo que llegar de 0 % a 80 %, y los usuarios cargan de más por ansiedad de
 autonomía. El resultado que reportan es +5 % de disponibilidad de carga rápida y +14 % de throughput
 en hora pico.
 
-Para nosotros esto **no es un modelo de arrepentimiento**, pero es una tercera palanca en el mismo eje
+Para nosotros esto **no es un modelo de arrepentimiento**, pero es una palanca en el mismo eje
 que la información: aumenta la capacidad efectiva **sin pagar `CPN` ni `CEN`**, y por lo tanto compite
 directamente con la condición de expansión. Traducido a nuestro modelo sería que un cargador se libera
 al llegar al 80 % de la carga, o sea un `TC` efectivo menor al observado.
@@ -551,10 +716,10 @@ tema del TP.
 
 ## 7. Efectos de segundo orden que hay que anticipar
 
-Cualquier modelo de paciencia (C, D, E, G) mete tres efectos que **no son bugs** pero que van a
+Cualquier modelo de paciencia (C, D, E, G, I) mete tres efectos que **no son bugs** pero que van a
 aparecer en los resultados y conviene tener explicados de antemano:
 
-1. **Sesgo de selección sobre `ECP`.** Si la paciencia crece con el tiempo de carga (alternativa G),
+1. **Sesgo de selección sobre `ECP`.** Si la paciencia crece con el tiempo de carga (alternativas G e I),
    los autos que se quedan son sistemáticamente los de carga larga. Entonces **`ECP` deja de ser la
    media de la distribución de energía y pasa a ser la media sobre los atendidos, sesgada hacia
    arriba**. Y `ECP` está en las dos condiciones de expansión de la propuesta. Hay que calcularlo
@@ -562,13 +727,14 @@ aparecer en los resultados y conviene tener explicados de antemano:
 2. **El throughput miente.** Como los de carga corta son los que se van, la estación puede atender
    pocos autos y facturar bien, o muchos y facturar mal. La métrica correcta bajo impaciencia es el
    **porcentaje de autos atendidos** y el beneficio, no la cantidad por unidad de tiempo.
-3. **`PARR` deja de ser "cuanto más bajo mejor".** Con información al usuario, el balking sube y el
-   sistema mejora. Si el informe concluye a partir de `PARR` sola, va a concluir mal. La conclusión
+3. **`PARR` deja de ser "cuanto más bajo mejor".** Con reneging, menos balking puede significar más
+   abandono y menos atendidos: es el caso `BlockingFC` de IDEAS
+   ([§4.3](#43-los-resultados-de-ideas-tabla-ii-y-sus-tres-contra-intuiciones)). Si el informe concluye a partir de `PARR` sola, va a concluir mal. La conclusión
    tiene que salir de `BM` + porcentaje de atendidos, con `PARR` desagregado como diagnóstico.
 
 Y un detalle de implementación que hay que resolver antes de escribir el motor:
 
-4. **`TC` se genera en el arribo, no al empezar a cargar.** Si la paciencia (G) o la estimación de
+4. **`TC` se genera en el arribo, no al empezar a cargar.** Si la paciencia (G, I) o la estimación de
    espera (C, F) dependen de `TC`, el auto tiene que traer su `TC` desde que llega. Es un cambio chico
    respecto del motor del TP 4, pero cambia dónde se consume el número aleatorio y por lo tanto los
    resultados: hay que hacerlo antes de fijar la semilla de las corridas del informe.
@@ -577,17 +743,17 @@ Y un detalle de implementación que hay que resolver antes de escribir el motor:
 
 ## 8. Tabla comparativa
 
-| Criterio | A | B | H | C | G | D | E | F |
-|---|---|---|---|---|---|---|---|---|
-| Mecanismo | balk. vol. | balk. vol. | **balk. forzado** | balk. vol. | paciencia | reneging | todos | modificador |
-| Respaldo empírico | ninguno | fórmula citada | físico | **EAFO** | **IDEAS (z=0,6)** | EAFO/IDEAS | todas | IDEAS + TII |
-| Reacciona a fallas / `TMP` | no | no | sí | sí | sí | **sí (real)** | **sí** | — |
-| Escala al crecer `CC(i)` | con cuidado | sí | sí (vía `CEM`) | sí | sí | sí | sí | — |
-| Agrega eventos / TEF | no | no | no | no | no | **sí** | **sí** | no |
-| Permite validar vs. Erlang-A | no | no | no | no | no | **sí** | sí | no |
-| Datos nuevos que hace falta conseguir | — | — | — | tabla EAFO | — | — | — | mezcla |
-| Costo de implementación | bajo | bajo | **muy bajo** | medio | **bajo** | medio-alto | alto | bajo |
-| Riesgo de motor mal sin darnos cuenta | bajo | bajo | bajo | medio | bajo | medio | **alto** | medio |
+| Criterio | A | B | H | C | G | I | D | E | F |
+|---|---|---|---|---|---|---|---|---|---|
+| Mecanismo | balk. vol. | balk. vol. | **balk. forzado** | balk. vol. | paciencia | balk. vol. | reneging | todos | modificador |
+| Respaldo empírico | ninguno | fórmula citada | físico | **BC Hydro** (EAFO valida) | **IDEAS (z=0,6)** | **BC Hydro, EAFO, IDEAS, Hanni** | EAFO/IDEAS | todas | IDEAS + TII |
+| Reacciona a fallas / `TMP` | no | no | sí | sí | sí | sí | **sí (real)** | **sí** | — |
+| Escala al crecer `CC(i)` | con cuidado | sí | sí (vía `CEM`) | sí | sí | sí | sí | sí | — |
+| Agrega eventos / TEF | no | no | no | no | no | no | **sí** | **sí** | no |
+| Permite validar vs. Erlang-A | no | no | no | no | no | no | **sí** | sí | no |
+| Datos nuevos que hace falta conseguir | — | — | — | tabla BC Hydro | — | — | — | — | mezcla |
+| Costo de implementación | bajo | bajo | **muy bajo** | medio | **bajo** | medio | medio-alto | alto | bajo |
+| Riesgo de motor mal sin darnos cuenta | bajo | bajo | bajo | medio | bajo | medio | medio | **alto** | medio |
 
 ---
 
@@ -604,34 +770,46 @@ Cada etapa deja algo presentable; si nos quedamos sin tiempo, cortamos donde est
 2. **Etapa 2 — Reneging con paciencia exponencial (D).** Implementar el evento de abandono y la
    entrada `TPAB(i)` en la TEF. *Verificable:* la corrida degenerada reproduce **Erlang-A** dentro de
    la tolerancia fijada de antemano. **Esta es la etapa que más valor agrega**, porque es la única
-   que nos da una vara externa para saber si el motor está bien.
-3. **Etapa 3 — Paciencia realista (G + C sobre D).** Cambiar la exponencial por
-   `TMEU = min(FI·TC, P_EAFO)` y agregar el balking voluntario por `W_est`. *Verificable:* con
-   capacidad sobrada, `PARR → ~31 %` (el piso de EAFO) y no a 0; y `PARR` sube al bajar `TMP`
-   (más fallas sin mantener → menos `CD(i)` → más espera).
-4. **Etapa 4 — Información (E).** Agregar `IEC` como cuarta variable de control y correr el escenario
-   con y sin información. *Verificable:* con `IEC = 1`, `PARRR` cae, `PARRB` **sube** (esto es lo
-   esperado, no un bug) y el porcentaje de atendidos y `BM` mejoran.
-5. **Etapa 5 — Perfiles (F).** Sólo si sobra tiempo.
+   que nos da una vara externa para saber si el motor está bien. Queda implementada aunque el modelo
+   final no lleve reneging.
+3. **Etapa 3 — Paciencia realista (I, sobre D si va el reneging).** Cambiar la exponencial por la
+   `TMEU` de la alternativa I —`0` con probabilidad `PNE`, `FI·TC` si no— y agregar el balking
+   voluntario por `W_est`. Con esto el modelo ya es **E**. *Verificable:* entre los arribos que
+   encuentran los cuatro cargadores ocupados y la cola vacía, la fracción que se arrepiente es
+   `PNE + (1 − PNE) · 15,9 %` con `FI = 0,6`
+   ([revisión §3.1](Calibracion_Arrepentimiento_Revision.md#31-los-números-con-nuestro-tc-no-con-el-del-ejemplo)),
+   y nunca baja de `PNE`; y `PARR` sube al subir `TMP` (mantenimientos más espaciados → más
+   cargadores fallados → menos `CD(i)` → más espera estimada).
+4. **Etapa 4 — Perfiles (F).** Sólo si sobra tiempo.
 
 ---
 
 ## 10. Decisiones que tenemos que cerrar entre los cuatro
+
+A éstas se suman las cinco de la
+[revisión §10](Calibracion_Arrepentimiento_Revision.md#10-decisiones-a-cerrar-entre-los-cuatro):
+escala de la paciencia, estimador de espera (cerrada: longitud de cola), piso del segmento que no
+espera, reparto dentro de los tramos y si el arrepentido entra a `CA(i)`. Las que se superponen con
+las de acá están actualizadas en su lugar.
 
 1. **¿Qué versión del TP 4 es la válida?** ¿La del paper (93 % con 1 auto) o la del código (93 % con
    2)? Sin esto, cualquier comparación con el TP 4 es inválida. Y hay que decidir **cómo lo contamos
    en el informe del TP final**, dado que el 93 % está además mal interpretado
    ([§3.3](#33-el-93--del-tp-4-es-una-lectura-equivocada-del-paper)). Propuesta: decirlo, es un
    hallazgo del trabajo y queda mejor que dejarlo pasar.
-2. **¿Paciencia absoluta (EAFO), relativa (`FI·TC`) o el mínimo de las dos?** Es la decisión de
-   modelado más importante: cambia `PARR` por un factor de 3 o 4. Propuesta: **el mínimo**, con las
-   dos puras como cotas de sensibilidad.
+2. **¿Paciencia absoluta, relativa (`FI·TC`) o una combinación?** Es la decisión de modelado más
+   importante: con los cuatro cargadores ocupados y la cola vacía, `PARR` va de 16 % a 95 % según la
+   escala. El mínimo de las dos no sirve: se queda con la paciencia chica, que es la que degenera.
+   Propuesta: **la alternativa I**, con `FI` barrido entre 0,16, 0,34 y 0,60 (decisión 1 de la
+   revisión).
 3. **Denominador de `PARR`.** ¿Arrepentidos sobre los arribos que pasaron el filtro `PDCE`, o sobre
-   todos los arribos generados? Propuesta: **sobre los que pasaron `PDCE`**. Y agregar la métrica
-   de IDEAS: **porcentaje de atendidos sobre los que efectivamente hicieron cola**, que es la que
-   muestra la mejora por información.
-4. **`PARR` por franja horaria.** Un auto que llega en la franja 2 y abandona en la 3, ¿en cuál
-   cuenta? Propuesta: **franja de llegada**.
+   todos los arribos generados? Propuesta: **sobre los que pasaron `PDCE`**, con el arrepentido fuera
+   de `CA(i)`, de modo que atendidos + arrepentidos + perdidos por falla cierren el 100 % (decisión 5
+   de la revisión). Y agregar la métrica de IDEAS: **porcentaje de atendidos sobre los que
+   efectivamente hicieron cola**, que con reneging es la que mide el servicio.
+4. **`PARR` por franja horaria — sólo si hay reneging (D).** Un auto que llega en la franja 2 y
+   abandona en la 3, ¿en cuál cuenta? Propuesta: **franja de llegada**. Con balking puro no se
+   plantea: la decisión es instantánea en el arribo.
 5. **Falla del cargador mientras un auto está cargando** — **cerrada**: el auto **se pierde**, se va
    a la competencia. Es el caso particular de paciencia remanente igual a cero, así que la decisión
    vale cualquiera sea el modelo de arrepentimiento que se adopte y no queda atada a esta discusión.
@@ -640,7 +818,11 @@ Cada etapa deja algo presentable; si nos quedamos sin tiempo, cortamos donde est
 6. **Valor de `CEM(i)`.** ¿Fijo o proporcional a `CC(i)`? Propuesta: **2 lugares de espera por
    cargador**, para que escale con la expansión y siga siendo coherente con el argumento de espacio
    físico de `CC_MAX`.
-7. **Tope del tramo "más de 1 hora"** de EAFO: hay que elegir un valor (¿2 h? ¿3 h?) y justificarlo.
+7. **Tope del último tramo abierto** —"más de 30 min" en BC Hydro, "más de 1 hora" en EAFO— y reparto
+   dentro de cada tramo. Propuesta: uniforme dentro del tramo y el tope justificado en una celda del
+   notebook; Hanni et al. cierra sus opciones en "90 min o más", mejor anclaje que los 120 min que
+   veníamos suponiendo. Baja de prioridad: el reparto mueve `PARR` a lo sumo 6,5 puntos (decisión 4
+   de la revisión).
 8. **Cancelación de eventos** (si vamos a D o E): recálculo del mínimo vs. evento fantasma.
    Propuesta: **recálculo**.
 9. **¿`ECP` sobre los atendidos o sobre la FDP teórica?** Propuesta: **sobre los atendidos**, por
@@ -651,20 +833,16 @@ Cada etapa deja algo presentable; si nos quedamos sin tiempo, cortamos donde est
 
 ## 11. Qué hay que tocar en la propuesta
 
-Si adoptamos **E** (o **D** + **G** + **H**), estos son los cambios mínimos a
-[Propuesta_TP-FINAL.md](Propuesta_TP-FINAL.md):
+Si adoptamos **E** —o sea **H** + **I** + **D**—, estos son los cambios mínimos a
+[Propuesta_TP-FINAL.md](Propuesta_TP-FINAL.md). Si no va el reneging (H + I), sobran `PARRR`, `TAB`,
+`TPAB` y el evento de abandono, y alcanza con desdoblar la fila del ingreso como en la
+[revisión §7.7](Calibracion_Arrepentimiento_Revision.md#77-qué-habría-que-tocar-en-la-propuesta).
 
 **Datos (FDP nueva)**
 
 | Sigla | Significado |
 |---|---|
 | `TMEU` | Tiempo Máximo de Espera tolerado por el Usuario (min) |
-
-**Control (sólo si vamos a E)**
-
-| Sigla | Significado |
-|---|---|
-| `IEC` | Información de Espera al Cliente (0 = no se informa, 1 = se informa la espera real) |
 
 **Resultado (desdoblar `PARR`)**
 
@@ -685,7 +863,8 @@ Si adoptamos **E** (o **D** + **G** + **H**), estos son los cambios mínimos a
 
 | Sigla | Significado |
 |---|---|
-| `FI` | Factor de Impaciencia: fracción del tiempo de carga propio que el usuario tolera esperar (0,6) |
+| `FI` | Factor de Impaciencia: fracción del tiempo de carga propio que el usuario tolera esperar (barrido 0,16–0,60; referencia de IDEAS: 0,6) |
+| `PNE` | Porcentaje de usuarios que No Esperan: si encuentran todos los cargadores ocupados, se van (barrido 12–31 %) |
 | `CEM` | Capacidad de Espera Máxima por estación (lugares de espera, atada a `CC(i)`) |
 
 **TEF**
@@ -729,3 +908,17 @@ Los PDF están en [`Bibliografia/`](Bibliografia/), con su índice.
 5. **Paper del TP 4** (Carlana Rivero, Loglen, Millán, Ojeda Cabrera, UTN-FRBA)
    ([PDF](Bibliografia/Paper_TP_4.pdf)). §2.1: regla de arrepentimiento vigente; §3: resultados de
    referencia.
+6. **Public Electric Vehicle Charging Service Rates — Evaluation Report for Year One.** British
+   Columbia Hydro and Power Authority, presentado ante la British Columbia Utilities Commission el 29
+   de agosto de 2025
+   ([PDF](Bibliografia/2025-08-29-bchydro-public-ev-charging-service-rates-evaluation-report-year-1.pdf)).
+   Apéndice C: disposición a esperar, encuesta de noviembre de 2024, preguntas 11d (urbano) y 12 (no
+   urbano).
+7. **Modeling of the Acceptable Waiting Time for EV Charging in Japan.** U. e Hanni, T. Yamamoto,
+   T. Nakamura, *Sustainability* 2024, 16, 2536. doi:10.3390/su16062536
+   ([PDF](Bibliografia/sustainability-16-02536.pdf)). §4.3 y figura 3: espera aceptable por ubicación,
+   para carga normal y rápida.
+8. **Should Charging Stations Provide Service for Plug-In Hybrid Electric Vehicles During Holidays?**
+   T. Zhang, X. Li, Y. Zhang, C. Shu, *Sustainability* 2025, 17, 336. doi:10.3390/su17010336
+   ([PDF](Bibliografia/sustainability-17-00336.pdf)). §4.2: forma exponencial de balking, tomada de
+   Gross, Shortle, Thompson y Harris, *Fundamentals of Queueing Theory* (Wiley, 2008).

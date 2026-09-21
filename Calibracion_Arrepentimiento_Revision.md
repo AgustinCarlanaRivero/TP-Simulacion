@@ -16,6 +16,17 @@
 > [§3](#3-el-problema-de-fondo-la-escala), [§4.3](#43-el-ajuste-por-mínimos-cuadrados-es-degenerado)
 > y el [apéndice A](#apéndice-a-script-de-verificación) están recalculados con la tabla de paciencia
 > corregida.
+>
+> **Actualización — la decisión se toma contra la longitud de la cola.** La versión anterior de esta
+> revisión proponía estimar la espera con los tiempos remanentes de carga de la TEF y dejar la
+> longitud de cola como escenario "sin información" (variable `IEC`). Queda **descartado**: el
+> conductor nunca observa cuánto le falta a cada carga en curso, así que un modelo que lo use le
+> atribuye información que no existe en la vereda. [§6](#6-la-premisa-corregida-el-que-no-ve-el-tiempo-es-el-conductor) está reescrita, y
+> [§5.3](#53-wq-tiene-mejor-pedigrí-del-que-el-documento-le-atribuye),
+> [§8](#8-respuestas-a-las-diez-preguntas-del-documento), [§9](#9-qué-proponemos-hacer) y
+> [§10](#10-decisiones-a-cerrar-entre-los-cuatro) quedan alineadas. **Los números de
+> [§3](#3-el-problema-de-fondo-la-escala) no cambian**: ya estaban calculados con el estimador por
+> longitud de cola.
 
 ---
 
@@ -32,6 +43,7 @@ con el `TC` que ajustamos en el TP 4, producen un modelo degenerado**.
 | **Lo que hay que borrar** | el ajuste de `α` ([§4.1](#41-ajustar-α-destruye-información-y-no-agrega-nada)): es una compresión con pérdida de una función que ya tenemos exacta |
 | **Lo que hay que rescatar** | BC Hydro como fuente de `TMEU`, EAFO como validación externa, y el planteo de tipo de cargador de su §12 — que no es un ítem a verificar, es la restricción que decide todo |
 | **Lo que agrega la bibliografía nueva** | Hanni et al. (2024), que su §5 citaba al pasar, es la fuente mejor alineada de las tres y la única que mide carga normal: la paciencia sube con la carga lenta, pero mucho menos que proporcionalmente ([§5.5](#55-hanni-et-al-2024-no-es-una-fuente-complementaria)) |
+| **Lo que queda cerrado** | la decisión se evalúa contra la **longitud de la cola**, que es lo único que el conductor ve al llegar; los remanentes de la TEF quedan fuera del modelo de comportamiento aunque el motor los tenga ([§6](#6-la-premisa-corregida-el-que-no-ve-el-tiempo-es-el-conductor)) |
 
 ---
 
@@ -266,6 +278,13 @@ por eso, `W(0)` baja de 30,4 a ≈ 21 min — y `PARR` en `q = 0` sigue dando 84
 de BC Hydro y 70 % con EAFO. La conclusión de [§3](#3-el-problema-de-fondo-la-escala) es robusta a las
 dos correcciones, la del estimador y la de la tabla.
 
+Con la decisión de [§6](#6-la-premisa-corregida-el-que-no-ve-el-tiempo-es-el-conductor), además, esa corrección deja de ser una mejora del estimador y pasa a
+ser una **cota de sensibilidad**. El conductor no ve cuánto le falta a la carga en curso: suponer una
+carga entera por delante es exactamente lo que hace. El sesgo hacia arriba no es un defecto de la
+fórmula, es el sesgo del que mira la cola desde el auto —el **AWT** de IDEAS—, así que la versión
+ingenua `(q+1)/CD · E[TC]` es la que corresponde al modelo principal, y la corregida por el remanente
+de equilibrio sirve para acotar cuánto de `PARR` viene de ese sesgo.
+
 ### 5.4. La disciplina de trazabilidad
 
 Su pregunta 10 —documentar por separado dato observado, parámetro calibrado, hipótesis de
@@ -312,26 +331,67 @@ inventar datos.
 
 ---
 
-## 6. La premisa falsa, que es la que abre la mejor salida
+## 6. La premisa, corregida: el que no ve el tiempo es el conductor
 
 El documento arranca (§1) y cierra (§11) sobre la base de que *"el dato disponible es la cantidad de
 vehículos en cola, no el tiempo de espera real"*, y de ahí sale toda la necesidad de aproximar.
 
-**En nuestro motor eso no es cierto: los `TPC(i)(j)` están en la TEF.** El instante en que se libera
-cada cargador ocupado es un dato exacto del estado, no algo que haya que estimar. La espera real del
-auto que llega a la posición `q+1` es el `(q+1)`-ésimo estadístico de orden de los fines de carga
-pendientes (encadenando los `TC` de los que ya están en cola, si `q+1 > CD(i)`, cosa que también
-tenemos si generamos `TC` en el arribo — ver [§7.4](#74-tc-se-sortea-en-el-arribo-no-al-empezar-a-cargar)).
+**La justificación está mal; la conclusión está bien.** Mal, porque en nuestro motor el dato existe:
+los `TPC(i)(j)` están en la TEF y el instante en que se libera cada cargador ocupado es estado exacto,
+no algo que haya que estimar. Bien, porque **el que no tiene la información no es el simulador: es el
+conductor**. La decisión de arrepentirse ocurre en la cabeza del que llega, en el instante del arribo,
+con lo que se ve desde el auto: cuántos cargadores hay, cuántos están ocupados y cuántos autos
+esperan. Nadie le muestra un cronómetro con lo que le falta a cada sesión en curso.
 
-Eso contesta su pregunta 2 y hace dos cosas:
+Que el motor tenga los remanentes no es una licencia para usarlos. Un modelo que los use no
+sobrestima ni subestima `PARR`: **simula otro sistema**, uno donde el conductor tiene acceso al estado
+interno de la estación. La asimetría de información es una propiedad del sistema que estamos
+simulando, no una limitación de nuestro modelo, y el modelo tiene que respetarla.
 
-1. **Elimina el riesgo principal que el documento declara.** No hace falta que `α` absorba el error de
-   la traducción `q → W`, porque no hace falta la traducción.
-2. **Convierte el problema en un eje experimental.** La diferencia entre lo que el usuario estima
-   mirando la cola (AWT, *Assumed Wait Time*) y lo que la estación puede publicar con los remanentes
-   reales (EWT, *Estimated Wait Time*) es la variable de control `IEC` de la alternativa E de
-   `Arrepentimiento_Alternativas.md`. Es una palanca de eficiencia **que no cuesta capital**, frente a
-   `CPN` y `CEN`, y es la conclusión más interesante que puede tener el TP.
+**Decisión cerrada: el arrepentimiento se evalúa contra la longitud de la cola.** De ahí salen cinco
+consecuencias.
+
+1. **El condicionamiento es lo observable desde el auto:** la cola `q(i)`, los cargadores en servicio
+   `CD(i)` y la propia necesidad de carga (`TC` del que llega, que él sí conoce). Nada más. Que el
+   modelo se escriba `P(TMEU < W(q))` no lo convierte en un modelo de tiempo real: `W(q)` es la
+   traducción que el **propio conductor** hace de la cola a minutos —"hay tres adelante y cuatro
+   cargadores, esto es una hora"— y es parte del modelo de comportamiento, no un artefacto de
+   cálculo. Es, exactamente, una `P(ARR | q, CD, TC)`.
+2. **Sigue reaccionando a las fallas y a `TMP`.** Es la diferencia con la regla del TP 4 y con un `α`
+   fijo: `CD(i)` está adentro del estimador, así que cuando se cae un cargador la **misma** cola se
+   traduce en más minutos y `PARR` sube sin que haya que recalibrar nada. El reproche de
+   `Arrepentimiento_Alternativas.md` §3.2(c) —que el balking por longitud de cola no se entera de las
+   fallas— aplica al umbral fijo sobre `q`, no a esta formulación. `TMP` conserva el canal por el que
+   mover el arrepentimiento, que era lo que estaba en riesgo.
+3. **La versión ingenua del estimador es la correcta**, y por la misma razón: el conductor supone una
+   carga entera por delante porque no puede ver el remanente. El sesgo hacia arriba de
+   [§5.3](#53-wq-tiene-mejor-pedigrí-del-que-el-documento-le-atribuye) deja de ser un defecto a
+   corregir y pasa a ser conducta modelada; la corrección por remanente de equilibrio queda como cota
+   de sensibilidad.
+4. **Cae el eje experimental `IEC`.** La alternativa E de `Arrepentimiento_Alternativas.md` proponía
+   contrastar el escenario en que el usuario estima a ojo (AWT, *Assumed Wait Time*) contra el que la
+   estación publica la espera calculada con los remanentes (EWT, *Estimated Wait Time*), y lo vendía
+   como la palanca de eficiencia que no cuesta capital. Ese escenario no se corre, y la alternativa E
+   queda reducida a **H + C + G** (+ **D** si va el reneging). Es lo que cuesta la decisión y conviene
+   decirlo: los ejes experimentales vuelven a ser las tres variables de control (`RC`, `TMP`, `PDCE`)
+   más el barrido de `FI` y el del piso de [§10](#10-decisiones-a-cerrar-entre-los-cuatro).
+5. **No toca el reneging.** La objeción es sobre el tiempo **remanente**, que el conductor no ve; el
+   tiempo **transcurrido** sí lo vive. El que ya esperó cuarenta minutos sabe que esperó cuarenta
+   minutos. Si adoptamos la alternativa D, el reloj de paciencia sigue siendo legítimo y la validación
+   contra Erlang-A de [§7.3](#73-se-pierde-la-única-validación-externa-disponible) sigue en pie.
+
+**La salvedad va en la discusión del informe, no en el modelo.** El tiempo exacto no lo puede publicar
+nadie —depende de los `TC` futuros de los autos que todavía están en cola—, pero una *estimación* sí
+es publicable y hay redes que la muestran en la app. Lo que dejamos fuera de alcance es modelar esa
+política, no negar que exista: va anotada como limitación declarada y línea futura, al lado del
+cargador de dos modos de `Arrepentimiento_Alternativas.md` §6.
+
+Queda una consecuencia sobre el documento revisado. Su §11 declara que el riesgo principal de la
+propuesta es que `α` termine absorbiendo el error de la traducción `q → W`. El riesgo desaparece, pero
+no porque la traducción mejore —se queda tal cual— sino porque
+[§4.1](#41-ajustar-α-destruye-información-y-no-agrega-nada) saca el `α`. La traducción imperfecta se
+queda, y está bien que se quede: es la imperfección del conductor, que es lo que el modelo tiene que
+reproducir.
 
 ---
 
@@ -414,14 +474,14 @@ efectos del denominador de `PARR(i)` y `PAPF(i)`.
 | # | Pregunta | Respuesta |
 |---:|---|---|
 | 1 | ¿Es válida `W(q) ≈ (q+1)/CD · E[TC]`? | Sí, y con mejor fundamento del que le atribuye: es la espera condicional exacta de una M/M/c. Sesgada hacia arriba con Gumbel ([§5.3](#53-wq-tiene-mejor-pedigrí-del-que-el-documento-le-atribuye)). |
-| 2 | ¿Hay mejor forma de traducir cola a espera? | Sí: no traducir. Los remanentes están en la TEF ([§6](#6-la-premisa-falsa-que-es-la-que-abre-la-mejor-salida)). |
+| 2 | ¿Hay mejor forma de traducir cola a espera? | La pregunta está mal dirigida: la traducción **es** el modelo de comportamiento, no un paso instrumental a optimizar. Los remanentes exactos están en la TEF, pero usarlos le daría al conductor información que no tiene ([§6](#6-la-premisa-corregida-el-que-no-ve-el-tiempo-es-el-conductor)). Se queda su fórmula, con la constante ingenua. |
 | 3 | ¿BC Hydro es comparable con nuestro dataset? | En tipo de pregunta sí, y es mejor que EAFO. En tecnología de carga no: 499 de sus 591 puertos son de carga rápida ([§5.1](#51-bc-hydro-es-mejor-fuente-que-eafo-para-tmeu)). Y su tabla venía con tres tramos permutados ([§11](#11-sobre-las-fuentes)). Para comparabilidad, la fuente es Hanni et al. ([§5.5](#55-hanni-et-al-2024-no-es-una-fuente-complementaria)). |
 | 4 | ¿La exponencial es buena forma funcional? | Es razonable y estándar en colas con balking, **muy anterior a Zhang et al. (2025)**: ese paper la toma de Gross, Shortle, Thompson y Harris (2008), e IDEAS la toma de un Zhang et al. de **2020**. Dos linajes independientes, ninguno nace en 2025 ([§11](#11-sobre-las-fuentes)). Pero acá el problema no es la forma: es el piso en `q = 0` y la dependencia de `CD` ([§4.2](#42-α-no-es-una-constante), [§4.4](#44-el-piso-en-q--0-no-es-un-caso-de-borde)). |
 | 5 | ¿Un `α` o varios según cargadores? | Ninguno de los dos: si `α` depende de `CD`, es el modelo de paciencia con pasos de más. |
 | 6 | ¿EAFO sólo validación o también base? | Sólo validación, como propone. Y el par 17 %–31 % como rango de sensibilidad del piso. |
 | 7 | ¿Hay literatura que estime `P(ARR|q)` directamente para EV? | Con los siete PDF de `Bibliografia/` leídos, no: hay dos formas funcionales parametrizadas, no estimadas (Zhang et al. 2025, IDEAS) y tres encuestas de paciencia (BC Hydro, EAFO, Hanni et al.), pero ninguna estimación empírica de esa probabilidad condicionada a la longitud de la cola. Lo más cerca es Hanni et al., que estima la distribución de `TMEU` condicionada al estado "ocupado al llegar", no al largo de la cola. Las estimaciones empíricas de balking por longitud de cola que conocemos vienen de call centers y retail. No lo damos por cerrado: hace falta una búsqueda dedicada. |
 | 8 | ¿Reemplazar la exponencial por la escalonada empírica? | **Sí. Es el punto central** ([§4.1](#41-ajustar-α-destruye-información-y-no-agrega-nada)). |
-| 9 | ¿Qué análisis de sensibilidad? | Barrer el piso entre 12 % y 31 %, y `FI` entre 0,13 y 0,60, que son los tres anclajes empíricos de [§10](#10-decisiones-a-cerrar-entre-los-cuatro). El criterio de éxito no es que `PARR` se mueva poco, sino que **la conclusión económica no se dé vuelta** entre las cotas. |
+| 9 | ¿Qué análisis de sensibilidad? | Barrer el piso entre 12 % y 31 %, y `FI` entre 0,16 y 0,60, que son los tres anclajes empíricos de [§10](#10-decisiones-a-cerrar-entre-los-cuatro). El criterio de éxito no es que `PARR` se mueva poco, sino que **la conclusión económica no se dé vuelta** entre las cotas. |
 | 10 | ¿Cómo documentar dato / parámetro / hipótesis / validación? | Su propio esquema, adoptado para todo el TP ([§5.4](#54-la-disciplina-de-trazabilidad)). |
 
 ---
@@ -446,19 +506,31 @@ efectos del denominador de `PARR(i)` y `PAPF(i)`.
      proporciones por tramo están publicadas sólo como gráfico.
 
    La salida practicable es quedarse con la forma relativa y **usar las dos tablas absolutas como
-   extremos de su barrido**, traduciéndolas al mismo parámetro: `FI` equivalente es
-   `E[TMEU] / E[TC]`, o sea **0,13 para BC Hydro** (16,0 min) y **0,24 para EAFO** (28,8 min), contra
-   el **0,60** de IDEAS. Así las dos ramas dejan de ser alternativas excluyentes y pasan a ser los
-   extremos de un mismo eje, que es la única lectura que sostienen los datos. Es un anclaje de la
-   **media**, no una equivalencia de distribuciones: el piso del segmento que no espera se sigue
-   tratando aparte (decisión 3 de [§10](#10-decisiones-a-cerrar-entre-los-cuatro)).
+   extremos de su barrido**, traduciéndolas al mismo parámetro. El anclaje tiene que tomar la media
+   **entre los que esperan**, `E[TMEU | TMEU > 0] / E[TC]`, y no la media total: las medias publicadas
+   (16,0 y 28,8 min) ya incluyen al segmento que responde "cero", y ese segmento lo modela `PNE` aparte
+   —incluirlo en el anclaje de `FI` lo cuenta dos veces y encoge la paciencia por debajo de lo que
+   dice la propia encuesta—. Así, `FI` equivalente es **0,16 para BC Hydro** (16,0 / 0,83 = 19,3 min)
+   y **0,34 para EAFO** (28,8 / 0,69 = 41,7 min), contra el **0,60** de IDEAS. Cada anclaje se apareja
+   con el `PNE` de su misma fuente (17 % y 31 % respectivamente): con ese par, la paciencia media total
+   del modelo vuelve a coincidir con la de la encuesta. Así las dos ramas dejan de ser alternativas
+   excluyentes y pasan a ser los extremos de un mismo eje, que es la única lectura que sostienen los
+   datos. Es un anclaje de la **media**, no una equivalencia de distribuciones: el piso del segmento
+   que no espera se sigue tratando aparte (decisión 3 de
+   [§10](#10-decisiones-a-cerrar-entre-los-cuatro)). Conviene notar además que el 38 % de cada media
+   sale del tope que se le asignó al último tramo abierto (120 min para "más de 30 min" en BC Hydro,
+   180 min para "más de 1 hora" en EAFO): aportan 6,0 de los 16,0 min y 10,8 de los 28,8 min, así que
+   este anclaje depende de la decisión sobre ese tope (decisión 4 de
+   [§10](#10-decisiones-a-cerrar-entre-los-cuatro)).
 
    Lo que **no** resuelve la degeneración es el `min()` de las dos que proponía
    `Arrepentimiento_Alternativas.md` §5.G: se queda con la chica, que es justamente la que rompe. Ese
    punto de aquel documento queda corregido por esta revisión.
-4. **Usar el estimador exacto de espera** (los remanentes de la TEF) y dejar el estimador por
-   longitud de cola como el escenario "sin información", que es el eje experimental gratis
-   ([§6](#6-la-premisa-falsa-que-es-la-que-abre-la-mejor-salida)).
+4. **Estimar la espera con la longitud de la cola, y sólo con eso.** El conductor decide con lo
+   que ve al llegar —cuántos autos tiene adelante y cuántos cargadores hay en servicio—, así que los
+   remanentes de la TEF quedan fuera del modelo de decisión aunque el motor los tenga
+   ([§6](#6-la-premisa-corregida-el-que-no-ve-el-tiempo-es-el-conductor)). Cae con esto el eje experimental `IEC` de la alternativa E de
+   `Arrepentimiento_Alternativas.md`, que pasa a ser una limitación declarada del informe.
 5. ~~Bajar los dos PDF nuevos a `Bibliografia/`.~~ **Hecho:** los tres están en
    [`Bibliografia/`](Bibliografia/README.md) con su entrada en el índice. Lo que queda pendiente es
    **corregir la tabla de paciencia de `Calibracion_Arrepentimiento_EV.md` §5**, que sigue con los
@@ -475,12 +547,17 @@ Se suman a las nueve de `Arrepentimiento_Alternativas.md` §10.
 1. **Escala de la paciencia:** ¿relativa (`FI·TC`) o absoluta? Es la decisión que define si el TP
    tiene resultados o no, y con Hanni et al. (2024) a la vista la respuesta no es ninguna de las dos
    puras ([§5.5](#55-hanni-et-al-2024-no-es-una-fuente-complementaria)). Propuesta: **`TMEU = FI·TC`
-   como modelo principal, con `FI` barrido entre los tres anclajes empíricos** — 0,13 (media de
-   BC Hydro), 0,24 (media de EAFO) y 0,60 (IDEAS). Las dos tablas absolutas dejan así de ser una
-   alternativa a la forma relativa y pasan a ser los extremos impacientes de su barrido. El anclaje es
-   de medias; el piso del segmento que no espera se decide aparte, en el punto 3.
-2. **`W_est` exacto (remanentes de la TEF) o aproximado (longitud de cola)?** Propuesta: **los dos**,
-   como escenarios de la variable `IEC`.
+   como modelo principal, con `FI` barrido entre los tres anclajes empíricos** — 0,16 (media de
+   BC Hydro entre los que esperan), 0,34 (media de EAFO entre los que esperan) y 0,60 (IDEAS). Las
+   dos tablas absolutas dejan así de ser una alternativa a la forma relativa y pasan a ser los
+   extremos impacientes de su barrido. El anclaje es de medias; el piso del segmento que no espera se
+   decide aparte, en el punto 3.
+2. **¿`W_est` exacto (remanentes de la TEF) o aproximado (longitud de cola)? — cerrada.**
+   **Aproximado, por longitud de cola.** El conductor no observa cuánto le falta a cada carga en
+   curso, así que un modelo que lo use simula otro sistema ([§6](#6-la-premisa-corregida-el-que-no-ve-el-tiempo-es-el-conductor)). Con esto cae el
+   escenario `IEC = 1`. Lo que sigue abierto no es el insumo sino la **constante** del estimador: la
+   ingenua `(q+1)/CD · E[TC]` como modelo principal y la corregida por el remanente de equilibrio
+   como cota ([§5.3](#53-wq-tiene-mejor-pedigrí-del-que-el-documento-le-atribuye)).
 3. **Piso del segmento que no espera:** 17 % (BC Hydro urbano), 12 % (BC Hydro no urbano) o 31 %
    (EAFO). Propuesta: **barrido entre 12 % y 31 %**. Hanni et al. respalda que el piso exista y sea
    grande también en carga normal —la moda de la espera aceptable es "no esperar nada" en todas las
@@ -591,8 +668,9 @@ BC   = [(0, .17), (5, .29), (10, .30), (15, .01), (30, .18), (120, .05)]
 EAFO = [(0, .31), (15, .32), (30, .18), (60, .13), (180, .06)]            # EAFO 2023
 
 media = lambda t: sum(top * p for top, p in t)
-print(f"\nE[TMEU] BC Hydro = {media(BC):5.2f} min -> FI equivalente = {media(BC) / ETC:.3f}")
-print(f"E[TMEU] EAFO     = {media(EAFO):5.2f} min -> FI equivalente = {media(EAFO) / ETC:.3f}")
+p0_BC, p0_EAFO = BC[0][1], EAFO[0][1]           # proporción que no espera (la modela PNE, no FI)
+print(f"\nE[TMEU] BC Hydro = {media(BC):5.2f} min -> FI equivalente = {media(BC) / (1 - p0_BC) / ETC:.3f}")
+print(f"E[TMEU] EAFO     = {media(EAFO):5.2f} min -> FI equivalente = {media(EAFO) / (1 - p0_EAFO) / ETC:.3f}")
 
 def P_balk(W, tabla):
     """P(TMEU < W), reparto uniforme dentro de cada tramo."""
