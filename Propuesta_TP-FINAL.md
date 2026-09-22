@@ -180,7 +180,8 @@ Este modelo plantea varias complejidades, las cuales se detallan a continuación
 
 | Evento | Evento Futuro no Condicionado | Evento Futuro Condicionado | Condición |
 |---|---|---|---|
-| Ingreso de auto a una estación (i) | Ingreso de auto a una estación (i) | Carga de auto en un cargador de una estación (i) (j) | `R < PDCE / 100 && CA(i) ≤ CD(i)` |
+| Ingreso de auto a una estación (i) | Ingreso de auto a una estación (i) | Carga de auto en un cargador de una estación (i) (j) | `R1 < PDCE / 100 && CA(i) ≤ CD(i)` |
+| | | – (el auto se arrepiente y se retira) | `R1 < PDCE / 100 && CA(i) > CD(i) && (R2 < PUNEN / 100 \|\| PU ≤ EEU)` |
 | Carga de auto en un cargador de una estación (i) (j) | – | Carga de auto en un cargador de una estación (i) (j) | `CA(i) ≥ CD(i)` |
 | Análisis de Expansión | Análisis de Expansión | Instalación de nuevo cargador (i) | `TPIC(i) = HV && CC(i) < CC_MAX && CARRUM(i) * (RC * ECP - CCP) > CPN` |
 | | | Construcción de nueva estación | `TPCE = HV && CE < CE_MAX && PDCE * CE < 100 && CPAACUM * 4 * (RC * ECP - CCP) > CEN` |
@@ -200,8 +201,8 @@ cargador y `TPCE = T + TCE` para la construcción de una estación. Esos dos tie
 que le dan sentido a las guardas `TPIC(i) = HV` y `TPCE = HV`, que exigen que no haya una obra del
 mismo tipo ya pendiente.
 
-En el **Ingreso de auto a una estación (i)**, `R` es el número aleatorio uniforme en [0, 1) que se
-sortea en cada arribo y `PDCE` está expresado en porcentaje. Si `R ≥ PDCE / 100` el vehículo no
+En el **Ingreso de auto a una estación (i)**, `R1` es el número aleatorio uniforme en [0, 1) que se
+sortea en cada arribo y `PDCE` está expresado en porcentaje. Si `R1 ≥ PDCE / 100` el vehículo no
 ingresa a la estación: es demanda no capturada, no ocupa cargador, no hace cola y no cuenta como
 arrepentido en `CARRUM(i)`.
 
@@ -303,6 +304,65 @@ cola por tipo de conector; y (b) no hay reserva de turno, cuando las apps de las
 muestran disponibilidad en tiempo real y anuncian la reserva — atender por orden de llegada
 sobrestima la espera respecto de un sistema con reservas.
 
+**Arrepentimiento: sólo balking voluntario.** El auto que ingresó a la estación y no encontró cargador
+libre decide en el acto si espera o se va; una vez que entró a la cola ya no se arrepiente. Se
+descarta el *reneging* —abandonar la cola después de haber esperado un rato— porque obligaría a
+arrastrar un tiempo de permanencia por vehículo dentro de la cola única, que es justamente el estado
+que la disciplina FCFS evita. La decisión se toma en dos pasos:
+
+1. **Los que no esperan nunca.** Se sortea `R2`, uniforme en [0, 1). Si `R2 < PUNEN / 100` el usuario
+   se retira sin evaluar nada más: es el segmento que declara irse apenas encuentra el punto ocupado.
+2. **Los demás comparan.** El usuario estima cuánto va a tardar con lo único que ve desde el auto
+   —los autos que tiene adelante y los cargadores en servicio— y lo contrasta con su propia
+   paciencia: `EEU = (q + 1) · TCP / CD(i)`, con `q = CA(i) − CD(i) − 1` los autos que ya estaban
+   esperando, y `PU = FI · TC`. Si `PU > EEU` se queda en la cola; si no, se arrepiente. Como `CA(i)`
+   ya incluye al auto que llega, `q + 1 = CA(i) − CD(i)`, que es la cantidad de cargas que tienen que
+   terminar antes de que le toque.
+
+El auto que se arrepiente se resta de `CA(i)` —donde se había sumado al ingresar— y suma uno a
+`CARRUM(i)`. El que se queda en la cola no dispara ningún evento condicionado: espera a que un fin de
+carga, una reparación, una instalación o un mantenimiento preventivo liberen un cargador. Por eso el
+arrepentimiento figura en la TEI como una fila sin evento futuro condicionado: es una actualización
+de estado, no un evento nuevo.
+
+`TC` se sortea **en el Ingreso y no al empezar la carga**, porque `PU` lo necesita antes de decidir, y
+es el mismo valor que después gobierna la carga si el auto se queda. La consecuencia es que el que
+espera es sistemáticamente un usuario de carga larga, así que la permanencia efectiva en cola queda
+por encima de `EEU`. Es un efecto del modelo, no un desvío a corregir.
+
+**De dónde sale `EEU`.** `(q + 1) · TCP / CD(i)` es la espera condicional de una fila única atendida
+por `CD(i)` servidores: con todos ocupados, las salidas ocurren a razón de una cada `TCP / CD(i)` y el
+que llega necesita `q + 1` salidas para que le toque. Es la regla de decisión de la **cola
+observable** de Naor (1969), donde el que llega ve cuántos usuarios hay en el sistema, estima su
+permanencia en `(n + 1)` tiempos medios de servicio y entra sólo si le conviene; Knudsen (1972)
+extiende ese resultado a una **fila única atendida por varios servidores**, que es nuestro caso y de
+donde sale el `/ CD(i)`. La comparación contra la paciencia propia sigue a IDEAS (Chattopadhyay y
+Kar, 2024), cuya ecuación (9) define la paciencia como una fracción `z` del tiempo de carga del
+propio usuario —nuestro `FI`— y cuya ecuación (5) la contrasta contra la espera estimada. Nos
+apartamos de IDEAS en un punto: su estimación suma aparte el remanente de la carga en curso, y la
+nuestra la cuenta entera dentro del `q + 1`.
+
+Ese apartamiento sesga `EEU` hacia arriba, y es deliberado. `TC` no es exponencial —es `gumbel_r` con
+`CV = 0,625`—, así que el remanente de equilibrio de una carga en curso tiene media 84,4 min contra
+los `TCP = 121,4` que `EEU` le atribuye. Pero `EEU` no es una predicción de la espera real sino la
+estimación que arma el conductor, que no ve cuánto le falta a la carga en curso y no tiene más
+remedio que suponerla entera. El modelo no afirma que la espera vaya a ser `EEU`, afirma que el
+usuario cree que va a ser `EEU`.
+
+**Parámetros y supuestos del arrepentimiento.** `PUNEN = 31 %` y `FI = 0,34` salen los dos del EAFO
+Consumer Monitor 2023: el primero es la proporción que declara irse sin cargar al encontrar el punto
+ocupado, y el segundo se obtiene como `E[TMEU | TMEU > 0] / TCP = 41,7 / 121,4`, o sea tomando la
+paciencia media **entre los que sí esperan**, para no contar dos veces al segmento que ya modela
+`PUNEN`. Con ese par, la paciencia media total del modelo da 28,5 min contra los 28,8 min que publica
+la encuesta, que es el chequeo de consistencia del anclaje. La misma cuenta sobre BC Hydro da
+`PUNEN = 17 %` y `FI = 0,16`; las dos fuentes se usan como extremos del análisis de sensibilidad,
+moviendo siempre el par junto, porque cada `FI` está anclado contra el `PUNEN` de su propia encuesta.
+
+Se supone además que: (a) la paciencia escala proporcionalmente al `TC` propio del usuario, cuando los
+datos japoneses de Hanni et al. (2024) sugieren que escala bastante menos; y (b) el usuario distingue
+los cargadores fuera de servicio de los ocupados, o sea que lee `CD(i)` y no `CC(i)`, cuando en la
+práctica un cargador fallado puede parecer simplemente ocupado.
+
 El cambio de franja horaria no genera ningún evento en la TEI ni ninguna TEF propia, y eso supone
 que: (a) el `IA` se sortea con la FDP de la franja y el tipo de día vigentes en el momento de
 generarlo, de modo que un arribo puede terminar cayendo dentro de otra franja — se acepta ese
@@ -321,6 +381,8 @@ entero a una sola.
 - **CPAACUM** (Cantidad Promedio de Autos Atendidos por Cargador en el Último Mes)
 - **CAPF(i)** (Cantidad de Autos Perdidos por Falla en la estación (i), acumulada en toda la corrida)
 - **ICC(i)(j)** (Instante de Comienzo de la Carga en curso en el cargador (i)(j))
+- **PU** (Paciencia del Usuario que llega: `FI · TC`, en minutos)
+- **EEU** (Espera Estimada por el Usuario que llega, en minutos)
 
 ## Valores Fijos mencionados
 
@@ -331,8 +393,24 @@ entero a una sola.
 - **CEN** (Costo de una Estación Nueva)
 - **TIC** (Tiempo de Instalación de Cargador: 1 semana, o sea 10 080 min)
 - **TCE** (Tiempo de Construcción de Estación: 6 meses, o sea 259 200 min)
+- **PUNEN** (Porcentaje de Usuarios que No Esperan Nunca: 31 %)
+- **FI** (Factor de Impaciencia: 0,34)
+- **TCP** (Tiempo de Carga Promedio: `E[TC]` de la FDP ajustada y truncada, 121,4 min)
 
 `TIC` y `TCE` son los tiempos de obra que transcurren entre la decisión del Análisis de Expansión y el
 evento que efectivamente suma la capacidad. Para pasarlos a minutos, que es la unidad en la que
 trabaja el modelo, se toma el mes de 30 días como convención. Se adoptan como valores fijos supuestos
 y pueden ajustarse más adelante.
+
+---
+
+## Referencias
+
+- Naor, P. (1969). The Regulation of Queue Size by Levying Tolls. *Econometrica*, 37(1), 15–24.
+- Knudsen, N. C. (1972). Individual and Social Optimization in a Multiserver Queue with a General
+  Cost-Benefit Structure. *Econometrica*, 40, 515–528.
+- Chattopadhyay, A. y Kar, S. (2024). IDEAS: Information-Driven EV Admission in Charging Station
+  Considering User Impatience to Improve QoS and Station Utilization. arXiv:2403.06223.
+- European Alternative Fuels Observatory (2024). *Consumer Monitor 2023 — EU Aggregated Report*.
+- Hanni, U. e., Yamamoto, T. y Nakamura, T. (2024). Modeling of the Acceptable Waiting Time for EV
+  Charging in Japan. *Sustainability*, 16(6), 2536.

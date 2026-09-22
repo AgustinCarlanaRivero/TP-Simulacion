@@ -92,12 +92,15 @@ disponibles (instalados y no fallados), `CC(i)` cargadores por estación, `CE` c
 
 **Auxiliares** — `CARRUM(i)` (arrepentidos del último mes), `ECP` (energía cargada promedio),
 `CPAACUM` (promedio de autos atendidos por cargador en el último mes), `CAPF(i)` (autos perdidos por
-falla, acumulado de toda la corrida), `ICC(i)(j)` (instante de comienzo de la carga en curso). Seguro
-surjan más.
+falla, acumulado de toda la corrida), `ICC(i)(j)` (instante de comienzo de la carga en curso),
+`PU` (paciencia del usuario que llega, `FI·TC`), `EEU` (espera estimada por el usuario que llega).
+Seguro surjan más.
 
 **Constantes** — `CC_MAX`, `CE_MAX`, `CCP` (costo por carga promedio), `CPN` (costo puesto nuevo),
 `CEN` (costo estación nueva), `TIC` (tiempo de instalación de cargador: 1 semana = 10 080 min), `TCE`
-(tiempo de construcción de estación: 6 meses = 259 200 min, con el mes de 30 días como convención).
+(tiempo de construcción de estación: 6 meses = 259 200 min, con el mes de 30 días como convención),
+`PUNEN` (% de usuarios que no esperan nunca: 31 %), `FI` (factor de impaciencia: 0,34), `TCP` (tiempo
+de carga promedio: `E[TC]` truncado, 121,4 min).
 `TIC` y `TCE` son los tiempos de obra entre la decisión del Análisis de Expansión y el evento que suma
 la capacidad; son valores fijos supuestos y pueden ajustarse más adelante. Seguro surjan más.
 
@@ -105,7 +108,8 @@ la capacidad; son valores fijos supuestos y pueden ajustarse más adelante. Segu
 
 | Evento (no condicionado) | Evento condicionado que dispara | Condición |
 |---|---|---|
-| Ingreso de auto a estación `(i)` | Carga en cargador `(i)(j)` | `R < PDCE/100 && CA(i) ≤ CD(i)` |
+| Ingreso de auto a estación `(i)` | Carga en cargador `(i)(j)` | `R1 < PDCE/100 && CA(i) ≤ CD(i)` |
+| Ingreso de auto a estación `(i)` | — (se arrepiente) | `R1 < PDCE/100 && CA(i) > CD(i) && (R2 < PUNEN/100 \|\| PU ≤ EEU)` |
 | Carga en cargador `(i)(j)` | Carga en cargador `(i)(j)` | `CA(i) ≥ CD(i)` |
 | Análisis de Expansión | Instalación de nuevo cargador `(i)` | `TPIC(i) = HV && CC(i) < CC_MAX && CARRUM(i)·(RC·ECP − CCP) > CPN` |
 | Análisis de Expansión | Construcción de nueva estación | `TPCE = HV && CE < CE_MAX && PDCE·CE < 100 && CPAACUM·4·(RC·ECP − CCP) > CEN` |
@@ -161,7 +165,9 @@ Cambia (no copiar tal cual):
   (el que espera toma el primer cargador que se libera). Decidido y justificado en la propuesta, con dos
   supuestos explicitados ahí: cargadores homogéneos e intercambiables, y sin reserva de turno.
 - **Arrepentimiento hardcodeado** (`PORCENTAJE_ARREPENTIMIENTO = 0.93`, corte duro en ≥3 autos) →
-  parametrizar y justificar.
+  reemplazado por **balking voluntario** en dos pasos: filtro `PUNEN` y comparación `PU > EEU`, con
+  `EEU = (q+1)·TCP/CD(i)`. `TC` pasa a sortearse **en el Ingreso**, no al empezar la carga, porque
+  `PU` lo necesita antes de decidir. Sin reneging. Ver la propuesta.
 - **~20 globals sueltos y `calculo_resultados` que solo imprime** → el motor debe **devolver** las
   métricas para poder correr escenarios y compararlos. Encapsular el estado (clase o dataclass).
 - **Regresión energía–tiempo**: el TP 4 hace `linregress(np.sort(tiempo), np.sort(energia))`, o sea ordena
