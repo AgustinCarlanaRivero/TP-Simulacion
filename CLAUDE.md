@@ -99,8 +99,9 @@ Seguro surjan más.
 **Constantes** — `CC_MAX`, `CE_MAX`, `CCP` (costo por carga promedio), `CPN` (costo puesto nuevo),
 `CEN` (costo estación nueva), `TIC` (tiempo de instalación de cargador: 1 semana = 10 080 min), `TCE`
 (tiempo de construcción de estación: 6 meses = 259 200 min, con el mes de 30 días como convención),
-`PUNEN` (% de usuarios que no esperan nunca: 31 %), `FI` (factor de impaciencia: 0,34), `TCP` (tiempo
-de carga promedio: `E[TC]` truncado, 121,4 min).
+`PUNEN` (% de usuarios que no esperan nunca: 31 %), `FI` (factor de impaciencia: `41,7 / TCP`), `TCP`
+(tiempo de carga promedio: `E[TC]` truncado). `FI` y `TCP` son fijos pero se calculan al reajustar la
+FDP de `TC` en el TP final: no se reciclan los valores del TP 4.
 `TIC` y `TCE` son los tiempos de obra entre la decisión del Análisis de Expansión y el evento que suma
 la capacidad; son valores fijos supuestos y pueden ajustarse más adelante. Seguro surjan más.
 
@@ -109,7 +110,6 @@ la capacidad; son valores fijos supuestos y pueden ajustarse más adelante. Segu
 | Evento (no condicionado) | Evento condicionado que dispara | Condición |
 |---|---|---|
 | Ingreso de auto a estación `(i)` | Carga en cargador `(i)(j)` | `R1 < PDCE/100 && CA(i) ≤ CD(i)` |
-| Ingreso de auto a estación `(i)` | — (se arrepiente) | `R1 < PDCE/100 && CA(i) > CD(i) && (R2 < PUNEN/100 \|\| PU ≤ EEU)` |
 | Carga en cargador `(i)(j)` | Carga en cargador `(i)(j)` | `CA(i) ≥ CD(i)` |
 | Análisis de Expansión | Instalación de nuevo cargador `(i)` | `TPIC(i) = HV && CC(i) < CC_MAX && CARRUM(i)·(RC·ECP − CCP) > CPN` |
 | Análisis de Expansión | Construcción de nueva estación | `TPCE = HV && CE < CE_MAX && PDCE·CE < 100 && CPAACUM·4·(RC·ECP − CCP) > CEN` |
@@ -118,6 +118,11 @@ la capacidad; son valores fijos supuestos y pueden ajustarse más adelante. Segu
 | Instalación de nuevo cargador `(i)` | Carga en cargador `(i)(j)` | `CA(i) ≥ CD(i)` |
 | Mantenimiento preventivo `(i)` | Carga en cargador `(i)(j)` | `CA(i) ≥ CD(i)` |
 | Construcción de nueva estación | — | — |
+
+El arrepentimiento (balking) **no va en la TEI**: es una rama de la rutina del Ingreso, igual que el
+filtro `PDCE`, y se decide **antes de actualizar el estado**. Si al llegar `CA(i) ≥ CD(i)`, el usuario
+se va si `R2 < PUNEN/100 || PU ≤ EEU`, con `q = CA(i) − CD(i)`. El arrepentido **nunca entra a la
+cola**: no toca `CA(i)`, suma a `CARRUM(i)` y la rutina termina sin evaluar condicionados.
 
 Los eventos que suman capacidad (Reparación, Instalación y Mantenimiento preventivo) enganchan al
 primero de la cola si hay cola: repiten la condición del fin de carga, con `CD(i)` ya actualizado; el
