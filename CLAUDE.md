@@ -93,7 +93,9 @@ disponibles (instalados y no fallados), `CC(i)` cargadores por estación, `CE` c
 **Auxiliares** — `CARRUM(i)` (arrepentidos del último mes), `ECP` (energía cargada promedio),
 `CPAACUM` (promedio de autos atendidos por cargador en el último mes), `CAPF(i)` (autos perdidos por
 falla, acumulado de toda la corrida), `ICC(i)(j)` (instante de comienzo de la carga en curso),
-`PU` (paciencia del usuario que llega, `FI·TC`), `EEU` (espera estimada por el usuario que llega).
+`PU` (paciencia del usuario que llega, `FI·TC`), `EEU` (espera estimada por el usuario que llega),
+`CTC(i)(j)` (`TC` del auto en la posición `j` de la cola de la estación `i`; `j` es posición en la cola,
+no cargador; longitud `max(0, CA(i) − CD(i))`).
 Seguro surjan más.
 
 **Constantes** — `CC_MAX`, `CE_MAX`, `CCP` (costo por carga promedio), `CPN` (costo puesto nuevo),

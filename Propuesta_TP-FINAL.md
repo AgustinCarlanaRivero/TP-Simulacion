@@ -334,6 +334,13 @@ es el mismo valor que después gobierna la carga si el auto se queda. La consecu
 espera es sistemáticamente un usuario de carga larga, así que la permanencia efectiva en cola queda
 por encima de `EEU`. Es un efecto del modelo, no un desvío a corregir.
 
+Como el `TC` ya está sorteado cuando el auto entra a la cola, se lo guarda en `CTC(i)(j)`, la cola de
+tiempos de carga de la estación `i`, donde `j` es la posición en la cola única (no un cargador). El
+que ingresa y espera se agrega al final; cada vez que un evento dispara una Carga en la estación `i`
+con cola, el auto de la posición 1 sale de `CTC(i)` y su `TC` define `TPC(i)(j)`. Si al ingresar hay
+un cargador disponible, el `TC` se usa directamente y no pasa por `CTC(i)`. En todo momento la
+longitud de `CTC(i)` es `max(0, CA(i) − CD(i))`.
+
 **De dónde sale `EEU`.** `(q + 1) · TCP / CD(i)` es la espera condicional de una fila única atendida
 por `CD(i)` servidores: con todos ocupados, las salidas ocurren a razón de una cada `TCP / CD(i)` y el
 que llega necesita `q + 1` salidas para que le toque. Es la regla de decisión de la **cola
@@ -389,6 +396,7 @@ entero a una sola.
 - **ICC(i)(j)** (Instante de Comienzo de la Carga en curso en el cargador (i)(j))
 - **PU** (Paciencia del Usuario que llega: `FI · TC`, en minutos)
 - **EEU** (Espera Estimada por el Usuario que llega, en minutos)
+- **CTC(i)(j)** (Cola de Tiempos de Carga: `TC` del auto en la posición `j` de la cola única de la estación (i), sorteado en el Ingreso)
 
 ## Valores Fijos mencionados
 
