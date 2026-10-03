@@ -400,10 +400,10 @@ entero a una sola.
 
 ## Valores Fijos mencionados
 
-- **CC_MAX** (Cantidad de Cargadores por estación MÁXimos)
+- **CC_MAX** (Cantidad de Cargadores por estación MÁXimos: 8)
 - **CCP** (Costo por Carga Promedio)
 - **CPN** (Costo de un Puesto Nuevo)
-- **CE_MAX** (Cantidad de Estaciones MÁXimas)
+- **CE_MAX** (Cantidad de Estaciones MÁXimas: 15, una por comuna de CABA)
 - **CEN** (Costo de una Estación Nueva)
 - **TIC** (Tiempo de Instalación de Cargador: 1 semana, o sea 10 080 min)
 - **TCE** (Tiempo de Construcción de Estación: 6 meses, o sea 259 200 min)

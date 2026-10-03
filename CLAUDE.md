@@ -98,7 +98,8 @@ falla, acumulado de toda la corrida), `ICC(i)(j)` (instante de comienzo de la ca
 no cargador; longitud `max(0, CA(i) − CD(i))`).
 Seguro surjan más.
 
-**Constantes** — `CC_MAX`, `CE_MAX`, `CCP` (costo por carga promedio), `CPN` (costo puesto nuevo),
+**Constantes** — `CC_MAX` (8; fuente pendiente de adjuntar), `CE_MAX` (15, una estación por comuna
+de CABA), `CCP` (costo por carga promedio), `CPN` (costo puesto nuevo),
 `CEN` (costo estación nueva), `TIC` (tiempo de instalación de cargador: 1 semana = 10 080 min), `TCE`
 (tiempo de construcción de estación: 6 meses = 259 200 min, con el mes de 30 días como convención),
 `PUNEN` (% de usuarios que no esperan nunca: 31 %), `FI` (factor de impaciencia: `41,7 / TCP`), `TCP`
@@ -308,5 +309,6 @@ de arriba de entrada.
 - Serie histórica del parque EV/PHEV en CABA para ajustar la logística, y el % de usuarios que cargan en
   domicilio (se resta de la demanda).
 - Segmentación del dataset por franja horaria y tipo de día para obtener las 6 FDPs de IA.
-- Valores de `CC_MAX`, `CE_MAX`, `CPN`, `CEN`, `CCP`, tarifas pico/valle y costos de mantenimiento.
+- Fuente de `CC_MAX = 8`.
+- Valores de `CPN`, `CEN`, `CCP`, tarifas pico/valle y costos de mantenimiento.
 - Cantidad de notebooks: uno solo, o separar "análisis de datos y FDPs" de "motor + experimentación".
