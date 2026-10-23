@@ -400,7 +400,7 @@ entero a una sola.
 
 ## Valores Fijos mencionados
 
-- **CC_MAX** (Cantidad de Cargadores por estación MÁXimos: 8)
+- **CC_MAX** (Cantidad de Cargadores por estación MÁXimos: 10. Fuente: https://www.mdpi.com/2071-1050/14/17/11033)
 - **CCP** (Costo por Carga Promedio)
 - **CPN** (Costo de un Puesto Nuevo)
 - **CE_MAX** (Cantidad de Estaciones MÁXimas: 15, una por comuna de CABA)

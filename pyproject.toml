@@ -1,0 +1,18 @@
+[project]
+name = "tp-simulacion"
+version = "0.1.0"
+description = "TP Final de Simulación (UTN): entorno local para ejecutar los notebooks fuera de Colab."
+# Misma versión menor que el entorno de Colab donde se ejecutó TP Final Simu.ipynb (3.13.15).
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "numpy",
+    "pandas",
+    "matplotlib",
+    "scipy",
+    "fitter",
+    "openpyxl",  # pandas.read_excel sobre los .xlsx de Curva Logística/
+    "ipykernel",  # kernel para ejecutar los notebooks desde VS Code / Jupyter
+]
+
+[tool.uv]
+package = false

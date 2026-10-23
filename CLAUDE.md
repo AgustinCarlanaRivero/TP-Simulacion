@@ -32,6 +32,36 @@ Equipo: Carlana Rivero, Loglen, Millán, Ojeda Cabrera.
 - La nomenclatura del código debe coincidir con la de la propuesta (siglas en mayúscula, ver tablas de
   abajo). Si se cambia una sigla o su significado, actualizar también la propuesta.
 
+### Versión local del notebook
+
+[TP Final Simu (local).ipynb](TP%20Final%20Simu%20%28local%29.ipynb) es la versión de
+[TP Final Simu.ipynb](TP%20Final%20Simu.ipynb) que se ejecuta desde VS Code, sin Colab, con el entorno
+de uv (`uv sync` sobre [pyproject.toml](pyproject.toml), kernel del `.venv`). El entorno de referencia
+sigue siendo Colab.
+
+Los dos notebooks tienen **las mismas celdas, en el mismo orden**, y difieren sólo en las celdas de
+entorno:
+
+| Celda | Colab | Local |
+|---|---|---|
+| Montaje de Drive (antes de la sección 1) | `drive.mount('/content/drive')` | Chequea que el directorio de trabajo sea la raíz del repositorio |
+| `pip install fitter` (sección 1) | Instala `fitter` | Sólo un comentario: las dependencias salen de `uv sync`, y el `.venv` no trae `pip` |
+| Carga de las series (2.1) | `PATH_CRECIMIENTO` en `Datos/Curva Logística/` del Drive | `Curva Logística/` del repositorio |
+| Ajuste de las series en paralelo (2.4) | `ProcessPoolExecutor` con contexto `fork` | `joblib.Parallel` (loky): Windows no tiene `fork`, y loky serializa con cloudpickle las funciones definidas en el notebook |
+| Carga del dataset (sección 3) | `PATH_DATOS` en el Drive | `Datos/` en la raíz del repositorio: copia local de los datasets de Drive, sin versionar (está en `.gitignore`) |
+
+**Regla: los dos notebooks están siempre sincronizados.**
+
+- Todo cambio en uno se replica en el otro en el mismo cambio y en el mismo commit, en la misma celda y
+  en la misma posición.
+- Fuera de las celdas de la tabla, el contenido de cada celda es idéntico en los dos. Una diferencia
+  nueva sólo se admite si es de entorno (rutas, instalación, paralelismo), y se agrega a la tabla en el
+  mismo cambio.
+- Cada celda nueva que paralelice con `ProcessPoolExecutor` y `fork` (ajuste de FDPs, barrido de
+  escenarios) lleva en la versión local su equivalente con `joblib.Parallel` y suma su fila a la tabla.
+- Antes de dar un cambio por terminado se comparan los dos notebooks celda por celda: misma cantidad de
+  celdas y diferencias sólo en las de la tabla.
+
 ## Modelo a simular
 
 Metodología: **evento a evento**, avance al próximo evento por mínimo de la TEF.
@@ -98,8 +128,8 @@ falla, acumulado de toda la corrida), `ICC(i)(j)` (instante de comienzo de la ca
 no cargador; longitud `max(0, CA(i) − CD(i))`).
 Seguro surjan más.
 
-**Constantes** — `CC_MAX` (8; fuente pendiente de adjuntar), `CE_MAX` (15, una estación por comuna
-de CABA), `CCP` (costo por carga promedio), `CPN` (costo puesto nuevo),
+**Constantes** — `CC_MAX` (10; fuente: https://www.mdpi.com/2071-1050/14/17/11033), `CE_MAX` (15,
+una estación por comuna de CABA), `CCP` (costo por carga promedio), `CPN` (costo puesto nuevo),
 `CEN` (costo estación nueva), `TIC` (tiempo de instalación de cargador: 1 semana = 10 080 min), `TCE`
 (tiempo de construcción de estación: 6 meses = 259 200 min, con el mes de 30 días como convención),
 `PUNEN` (% de usuarios que no esperan nunca: 31 %), `FI` (factor de impaciencia: `41,7 / TCP`), `TCP`
@@ -208,7 +238,8 @@ Condiciones para que esto funcione:
   reproducibles.
 - En Colab, usar `concurrent.futures.ProcessPoolExecutor` (el trabajo es CPU-bound, los hilos no sirven
   por el GIL) y dimensionar los workers según `os.cpu_count()`, que en el entorno CPU de Colab es 2.
-  Definir las funciones a paralelizar a nivel de módulo para que sean serializables.
+  Definir las funciones a paralelizar a nivel de módulo para que sean serializables. En la versión
+  local, `joblib.Parallel` en lugar de `ProcessPoolExecutor` (ver *Versión local del notebook*).
 
 ### Entorno de ejecución en Colab
 
@@ -309,6 +340,5 @@ de arriba de entrada.
 - Serie histórica del parque EV/PHEV en CABA para ajustar la logística, y el % de usuarios que cargan en
   domicilio (se resta de la demanda).
 - Segmentación del dataset por franja horaria y tipo de día para obtener las 6 FDPs de IA.
-- Fuente de `CC_MAX = 8`.
 - Valores de `CPN`, `CEN`, `CCP`, tarifas pico/valle y costos de mantenimiento.
 - Cantidad de notebooks: uno solo, o separar "análisis de datos y FDPs" de "motor + experimentación".
