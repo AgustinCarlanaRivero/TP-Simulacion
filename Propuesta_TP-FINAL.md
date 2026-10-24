@@ -35,7 +35,7 @@ indisponibilidad técnica evitables.
   híbridos recargables por enchufe, y se le resta el porcentaje de usuarios que cargan en su
   domicilio. A corto plazo, la variabilidad de la demanda se gestiona mediante distintas franjas
   horarias para días hábiles y fines de semana. A largo plazo, el crecimiento se modela con una curva
-  logística, en forma de "S".
+  en forma de "S" (Gompertz).
 - **Estructura dinámica de costos:** El costo de la energía fluctúa dependiendo de las tarifas por
   franja horaria (picos y valles). A esto se le suman los costos variables de mantenimiento, la
   amortización por instalación de nueva infraestructura, y los costos directos de inversión requeridos
@@ -74,11 +74,17 @@ Este modelo plantea varias complejidades, las cuales se detallan a continuación
   horarias, también varía a largo plazo, y sobre todo en un país donde la incorporación de autos
   eléctricos es reciente. En otros países bajo situaciones similares, se ha observado que por un
   tiempo la demanda crece de forma acelerada, hasta llegar a un punto de inflexión a partir del cual
-  crece de forma desacelerada. Este comportamiento se describe con una curva logística, la cual tiene
-  forma de "S" (`P(t) = K / (1 + A · e^(−r·t))`). Es por eso que ajustaremos dicha curva al historial
+  crece de forma desacelerada. Este comportamiento se describe con una curva en forma de "S".
+  Originalmente se planteó la curva logística (`P(t) = K / (1 + A · e^(−r·t))`), pero al ajustarla a
+  CABA su simetría proyectaba una saturación irrealmente rápida, por lo que se adopta la curva de
+  Gompertz (`P(t) = K · e^(−b · e^(−c·t))`), asimétrica: crece rápido al principio y se aproxima
+  lentamente a la saturación. Es por eso que ajustaremos dicha curva al historial
   en CABA (basándonos en las características de la misma para otros países), y obtendremos de ella un
-  Factor (variable en el tiempo) por el cual multiplicaremos nuestros Intervalos entre Arribos, para
-  que disminuyan en el periodo de aceleración y aumenten en el período de desaceleración.
+  Factor (variable en el tiempo) por el cual multiplicaremos nuestros Intervalos entre Arribos: el
+  cociente entre el parque inicial y el parque en cada instante (`P(0) / P(t)`), porque los arribos
+  los generan todos los autos en circulación. Así, los Intervalos entre Arribos disminuyen a medida que
+  crece el parque, rápido en el período de aceleración y cada vez más lento en el de desaceleración,
+  hasta estabilizarse cuando el parque se satura.
 - **Múltiples estaciones y cargadores:** El sistema comienza con 1 estación y 4 cargadores, pero la
   cantidad de cargadores puede ampliarse a medida que aumenta la demanda, así como pueden aumentar la
   cantidad de estaciones cuando convenga capturar una mayor porción de la demanda. Cada 1 mes, se

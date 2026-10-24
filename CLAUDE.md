@@ -46,8 +46,7 @@ entorno:
 |---|---|---|
 | Montaje de Drive (antes de la sección 1) | `drive.mount('/content/drive')` | Chequea que el directorio de trabajo sea la raíz del repositorio |
 | `pip install fitter` (sección 1) | Instala `fitter` | Sólo un comentario: las dependencias salen de `uv sync`, y el `.venv` no trae `pip` |
-| Carga de las series (2.1) | `PATH_CRECIMIENTO` en `Datos/Curva Logística/` del Drive | `Curva Logística/` del repositorio |
-| Ajuste de las series en paralelo (2.4) | `ProcessPoolExecutor` con contexto `fork` | `joblib.Parallel` (loky): Windows no tiene `fork`, y loky serializa con cloudpickle las funciones definidas en el notebook |
+| Carga de las series (2.1) | `PATH_CRECIMIENTO` en `Datos/Crecimiento del Parque/` del Drive | `Crecimiento del Parque/` del repositorio |
 | Carga del dataset (sección 3) | `PATH_DATOS` en el Drive | `Datos/` en la raíz del repositorio: copia local de los datasets de Drive, sin versionar (está en `.gitignore`) |
 
 **Regla: los dos notebooks están siempre sincronizados.**
@@ -73,9 +72,12 @@ Metodología: **evento a evento**, avance al próximo evento por mínimo de la T
    sortea con la FDP vigente al generarlo (un arribo puede caer en otra franja, sobre todo en la
    nocturna) y los acumuladores por franja y el costo de energía se **prorratean** entre las franjas
    que atraviesa cada tramo.
-2. **Crecimiento a largo plazo**: curva logística `P(t) = K / (1 + A·e^(−r·t))` ajustada al parque de
-   EV/PHEV de CABA. De ahí sale un **factor variable en el tiempo** que multiplica el IA generado
-   (achica los IA en la fase de aceleración, los agranda en la de desaceleración).
+2. **Crecimiento a largo plazo**: curva de Gompertz `P(t) = K·e^(−b·e^(−c·t))` ajustada al parque de
+   EV/PHEV de CABA, con el techo `K` tomado de la mediana de siete mercados maduros (reemplaza a la
+   logística de la propuesta original, que proyectaba una saturación irrealmente rápida; ver la sección 2
+   del notebook). De ahí sale un **factor variable en el tiempo** que multiplica el IA generado
+   (`P(T=0) / P(T)`, sobre el stock: achica los IA rápido en la fase de aceleración y cada vez más lento
+   en la de desaceleración, hasta estabilizarse cuando el parque se satura).
 3. **Múltiples estaciones y cargadores con expansión dinámica**: arranca con 1 estación y 4 cargadores.
    Cada mes ocurre un **Análisis de Expansión** que decide, por conveniencia económica, agregar un
    cargador y/o construir una estación. Topes: `CC_MAX` (cargadores por estación) y `CE_MAX` (estaciones).
@@ -195,7 +197,7 @@ energía ≈ `0.0859·TC − 1.7595` kWh; `PE = 108.48 $/kWh`. Dataset: `Dataset
 
 Cambia (no copiar tal cual):
 
-- **Un solo IA global → 6 IAs por franja/tipo de día**, más el factor logístico de crecimiento. El reloj
+- **Un solo IA global → 6 IAs por franja/tipo de día**, más el factor de crecimiento del parque. El reloj
   tiene que mapear `T` (minutos desde el inicio) a hora del día y tipo de día.
 - **Elección de servidor aleatoria** (`eleccion_server` usa `random.randrange`) → en el TP final **no hay
   elección de estación ni de cargador**: cada estación tiene su propio `TPI(i)` y `PDCE` decide, arribo
@@ -337,8 +339,6 @@ de arriba de entrada.
 - Origen de datos para `TFC` y `TRC` (el dataset del TP 4 no los tiene). La definición nueva de `TFC`
   condiciona qué dato buscar: el tiempo entre la puesta en servicio (reparación) y la falla siguiente
   del mismo cargador, no el tiempo entre fallas consecutivas.
-- Serie histórica del parque EV/PHEV en CABA para ajustar la logística, y el % de usuarios que cargan en
-  domicilio (se resta de la demanda).
 - Segmentación del dataset por franja horaria y tipo de día para obtener las 6 FDPs de IA.
 - Valores de `CPN`, `CEN`, `CCP`, tarifas pico/valle y costos de mantenimiento.
 - Cantidad de notebooks: uno solo, o separar "análisis de datos y FDPs" de "motor + experimentación".
