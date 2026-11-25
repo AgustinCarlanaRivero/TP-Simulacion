@@ -46,8 +46,10 @@ entorno:
 |---|---|---|
 | Montaje de Drive (antes de la sección 1) | `drive.mount('/content/drive')` | Chequea que el directorio de trabajo sea la raíz del repositorio |
 | `pip install fitter` (sección 1) | Instala `fitter` | Sólo un comentario: las dependencias salen de `uv sync`, y el `.venv` no trae `pip` |
+| Imports (sección 1) | Además de los comunes, `multiprocessing` y `ProcessPoolExecutor` | Además de los comunes, `joblib` (`Parallel`, `delayed`) |
 | Carga de las series (2.1) | `PATH_CRECIMIENTO` en `Datos/` del Drive | `Datos/` en la raíz del repositorio, igual que el dataset de la sección 3 |
-| Carga del dataset (sección 3) | `PATH_DATOS` en el Drive | `Datos/` en la raíz del repositorio: copia local de los datasets de Drive, sin versionar (está en `.gitignore`) |
+| Carga del dataset (sección 3) | `PATH_DATOS` en el Drive | `Datos/` en la raíz del repositorio: copia local de los datasets de Drive |
+| `ejecutar_en_paralelo` (sección 4; la usan los ajustes de FDPs de las secciones 4 a 6) | `ProcessPoolExecutor` con `fork` | `joblib.Parallel` |
 
 **Regla: los dos notebooks están siempre sincronizados.**
 
@@ -60,6 +62,14 @@ entorno:
   escenarios) lleva en la versión local su equivalente con `joblib.Parallel` y suma su fila a la tabla.
 - Antes de dar un cambio por terminado se comparan los dos notebooks celda por celda: misma cantidad de
   celdas y diferencias sólo en las de la tabla.
+
+**`KeyError` de joblib al cerrar el kernel local.** En Windows, al terminar una ejecución de la versión
+local pueden aparecer, fuera de cualquier celda, uno o varios `KeyError` con rutas
+`...\Temp\joblib_memmapping_folder_...` (uno por carpeta). Los produce joblib (backend `loky`) al borrar
+sus carpetas temporales de memmapping cuando se apaga el kernel. No viene de ninguna celda, no deja salida en el
+notebook y no afecta los resultados. En Colab no se espera, porque ahí se paraleliza con
+`ProcessPoolExecutor` y no con joblib (no se verificó). Un `KeyError` que sí aparezca como salida de una celda es otro problema y se
+investiga.
 
 ## Modelo a simular
 
@@ -195,6 +205,11 @@ acotada en [0.1, 1375.92] min; `IA` global → `landau(loc=4.17, scale=3.00)` ac
 energía ≈ `0.0859·TC − 1.7595` kWh; `PE = 108.48 $/kWh`. Dataset: `Dataset California.csv` en Drive
 (`/content/drive/MyDrive/Colab Notebooks/TP Final Simu/Datos/`).
 
+En el TP Final, `TC` y las seis `IA` salen de `Dataset California.csv` restringido a la ventana
+1/1/2018–29/2/2020 (red estable, antes de la pandemia), y `TFC` y `TRC`, de `Dataset Escocia.xlsx`
+(reportes de fallas de la red pública de Escocia), en la misma carpeta. Los supuestos de cada uno
+están en las secciones 3 a 6 del notebook.
+
 Cambia (no copiar tal cual):
 
 - **Un solo IA global → 6 IAs por franja/tipo de día**, más el factor de crecimiento del parque. El reloj
@@ -269,6 +284,12 @@ no alcanza con ajustar réplicas u horizonte, recién ahí evaluar v5e-1 por sus
   de simulación → experimentación → conclusiones.
 - Encabezado estándar de Colab: `drive.mount('/content/drive')`, `pip install fitter`, imports
   (`numpy`, `pandas`, `matplotlib`, `scipy.stats`, `fitter`, `math`, `random`).
+- **Todos los imports van en la celda de imports de la sección 1.** Ninguna otra celda importa
+  módulos: el que necesite uno nuevo lo agrega ahí, en los dos notebooks, y si el import es de entorno
+  (como los del paralelismo) la diferencia ya está cubierta por la fila "Imports" de la tabla de la
+  versión local. La única excepción es la celda de entorno anterior a la sección 1 (montaje de Drive en
+  Colab, chequeo del directorio de trabajo en la versión local), que se ejecuta antes que los imports e
+  importa lo suyo (`google.colab`, `pathlib`).
 - Cada elección de FDP va acompañada de una celda markdown que **justifica** la distribución elegida.
 - Semilla fija para las corridas reproducibles del informe; escenarios de sensibilidad variando `RC`,
   `TMP` y `PDCE`.
@@ -336,9 +357,5 @@ de arriba de entrada.
 
 ## Pendientes / decisiones abiertas
 
-- Origen de datos para `TFC` y `TRC` (el dataset del TP 4 no los tiene). La definición nueva de `TFC`
-  condiciona qué dato buscar: el tiempo entre la puesta en servicio (reparación) y la falla siguiente
-  del mismo cargador, no el tiempo entre fallas consecutivas.
-- Segmentación del dataset por franja horaria y tipo de día para obtener las 6 FDPs de IA.
 - Valores de `CPN`, `CEN`, `CCP`, tarifas pico/valle y costos de mantenimiento.
 - Cantidad de notebooks: uno solo, o separar "análisis de datos y FDPs" de "motor + experimentación".
