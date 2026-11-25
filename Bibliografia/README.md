@@ -9,6 +9,7 @@ cita.
 | [`Paper_TP_4.pdf`](Paper_TP_4.pdf) | Nuestro paper del TP 4 | Base del TP final |
 | [`IDEAS_2024_Chattopadhyay_Kar_arXiv_2403.06223.pdf`](IDEAS_2024_Chattopadhyay_Kar_arXiv_2403.06223.pdf) | Modelo de impaciencia en estaciones de carga | Comparación de la paciencia propia (`PU = FI · TC`) contra la espera estimada |
 | [`EAFO_Consumer_Monitor_2023_EU_Aggregated_Report.pdf`](EAFO_Consumer_Monitor_2023_EU_Aggregated_Report.pdf) | Encuesta europea a conductores de vehículos eléctricos | Calibración de `PUNEN` y `FI` |
+| [`bachelor_Pham_Minh_Khoa_2023.pdf`](bachelor_Pham_Minh_Khoa_2023.pdf) | Tesis de grado sobre modelos de difusión aplicados al parque eléctrico nórdico | Referencia metodológica del ajuste de la curva de crecimiento del parque |
 
 ---
 
@@ -52,6 +53,16 @@ DG MOVE, junio de 2024. doi:10.2832/062076. Licencia CC BY 4.0.
 
 Citado desde [`../Propuesta_TP-FINAL.md`](../Propuesta_TP-FINAL.md), en los parámetros del
 arrepentimiento.
+
+### `bachelor_Pham_Minh_Khoa_2023.pdf`
+
+**Using Diffusion Models to Forecast Electric Vehicle Outlook in Finland, Sweden, and Norway.**
+M. K. Pham. Tesis de grado, Aalto University School of Business, 17 de marzo de 2023.
+
+- Comparación de los modelos de Bass, logístico, Gompertz y Bass generalizado sobre la adopción de
+  vehículos eléctricos: Gompertz y logístico son los de mejor ajuste.
+
+Citado desde la sección 2 de los notebooks del TP final, en las fuentes del crecimiento del parque.
 
 ---
 

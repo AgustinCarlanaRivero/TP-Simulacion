@@ -10,7 +10,7 @@ dependencies = [
     "matplotlib",
     "scipy",
     "fitter",
-    "openpyxl",  # pandas.read_excel sobre los .xlsx de Crecimiento del Parque/
+    "openpyxl",  # pandas.read_excel sobre los .xlsx de Datos/
     "ipykernel",  # kernel para ejecutar los notebooks desde VS Code / Jupyter
 ]
 

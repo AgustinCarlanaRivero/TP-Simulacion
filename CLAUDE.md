@@ -46,7 +46,7 @@ entorno:
 |---|---|---|
 | Montaje de Drive (antes de la sección 1) | `drive.mount('/content/drive')` | Chequea que el directorio de trabajo sea la raíz del repositorio |
 | `pip install fitter` (sección 1) | Instala `fitter` | Sólo un comentario: las dependencias salen de `uv sync`, y el `.venv` no trae `pip` |
-| Carga de las series (2.1) | `PATH_CRECIMIENTO` en `Datos/Crecimiento del Parque/` del Drive | `Crecimiento del Parque/` del repositorio |
+| Carga de las series (2.1) | `PATH_CRECIMIENTO` en `Datos/` del Drive | `Datos/` en la raíz del repositorio, igual que el dataset de la sección 3 |
 | Carga del dataset (sección 3) | `PATH_DATOS` en el Drive | `Datos/` en la raíz del repositorio: copia local de los datasets de Drive, sin versionar (está en `.gitignore`) |
 
 **Regla: los dos notebooks están siempre sincronizados.**
