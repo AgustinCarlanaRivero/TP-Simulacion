@@ -69,7 +69,8 @@ Este modelo plantea varias complejidades, las cuales se detallan a continuación
   operatoria se dividirá entre días de semana y fines de semana, y a su vez, estará segmentada en
   distintas franjas horarias. Cada una de estas franjas y tipos de día (semana o fin de semana) tendrá
   asignada una función de densidad de probabilidad (FDP) de intervalos de arribos (IA) diferente,
-  simulando los picos y valles de demanda reales.
+  simulando los picos y valles de demanda reales. El fin de semana va del viernes a las 20:00 al domingo
+  a las 19:59: la franja nocturna toma el tipo de día de la mañana en que termina.
 - **Crecimiento de la demanda a largo plazo:** La demanda real no solo varía mediante franjas
   horarias, también varía a largo plazo, y sobre todo en un país donde la incorporación de autos
   eléctricos es reciente. En otros países bajo situaciones similares, se ha observado que por un

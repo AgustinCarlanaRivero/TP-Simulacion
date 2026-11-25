@@ -78,7 +78,9 @@ Metodología: **evento a evento**, avance al próximo evento por mínimo de la T
 ### Complejidades respecto de lo visto en clase
 
 1. **Demanda por franja horaria**: 6 FDPs de intervalo entre arribos (3 franjas × semana / fin de semana).
-   Franjas: 08:00–12:59, 13:00–19:59, 20:00–07:59. El cambio de franja **no es un evento**: el `IA` se
+   Franjas: 08:00–12:59, 13:00–19:59, 20:00–07:59. El fin de semana va del viernes a las 20:00 al domingo a
+   las 19:59: la franja nocturna toma el tipo de día de la mañana en que termina (la del viernes es de fin
+   de semana y la del domingo, de semana). El cambio de franja **no es un evento**: el `IA` se
    sortea con la FDP vigente al generarlo (un arribo puede caer en otra franja, sobre todo en la
    nocturna) y los acumuladores por franja y el costo de energía se **prorratean** entre las franjas
    que atraviesa cada tramo.
