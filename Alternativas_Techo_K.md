@@ -19,7 +19,8 @@ comunes a todas las ramas:
 sensibilidad (`K` = 56 294).
 
 **Elección tentativa:** rama **B1**, con mediana y análisis de sensibilidad. Falta confirmarla con el
-equipo, y depende del dato del parque de automóviles de CABA, que todavía no está en el repositorio.
+equipo. El dato del parque de CABA ya está en `Datos/Parque Automotor CABA.xlsx`, pero hay que
+aproximar la fracción de automóviles, y con ese dato B1 no pasa el control de 2.4 (ver la sección 3).
 
 ---
 
@@ -232,6 +233,54 @@ posible a mediados de 2026. Si sólo hay parque registrado y no parque activo, s
 explicita: los registros suelen sobrestimar el parque porque muchas bajas nunca se informan. Fuentes
 posibles: IDECBA o DNRPA.
 
+**Dato disponible: `Datos/Parque Automotor CABA.xlsx`.** Es el cuadro TPTE_PA del IDECBA, sobre datos de
+la DNRPA: parque automotor mensual de CABA y del país, de 2010 a octubre de 2026.
+- **Valor a usar: junio de 2026, 1 679 722 vehículos.** Coincide con `T = 0`, aunque es provisorio
+  (lo son todos los datos desde mayo de 2026).
+- **Radicados en CABA:** sí. Son automotores inscriptos en los registros seccionales de CABA, el mismo
+  criterio que los patentamientos de 2.1.
+- **Activo o registrado:** según la ficha técnica, son automotores "en condiciones de circular", así
+  que se excluyen las bajas registradas. Igual se basa en el registro: los autos que dejaron de
+  circular sin darse de baja siguen contando.
+- **Crecimiento:** el parque crece entre 1 % y 2 % por año (1,57 M en 2021, 1,68 M en 2026). El supuesto
+  de parque constante es una aproximación.
+
+**Aproximación de la fracción de automóviles.** El cuadro incluye **todos los automotores**
+(automóviles, comerciales livianos y pesados), y la rama B necesita sólo automóviles. No hay un dato del
+parque por tipo, así que se aproxima la fracción de automóviles con la de los patentamientos de CABA
+(`Total Patentamientos CABA.xlsx`, columnas de automóviles y total):
+
+| Año | 2020 | 2021 | 2022 | 2023 | 2024 | 2025 | 2026 (1.er sem.) | 2020–2026 |
+|---|---|---|---|---|---|---|---|---|
+| Automóviles / total patentado | 76,0 % | 69,0 % | 66,6 % | 64,6 % | 70,3 % | 74,3 % | 76,0 % | **70,7 %** |
+
+`parque de automóviles ≈ 1 679 722 × 70,7 % ≈ 1 187 700`
+
+Supuesto a explicitar: la composición del parque por tipo de vehículo es la de los patentamientos de
+2020–2026. Es una aproximación, porque el parque acumula décadas de ventas con otra composición. El
+rango anual (64,6 % a 76,0 %) da un parque de automóviles de entre 1,09 M y 1,28 M.
+
+**Resultado con B1** (`K` = parque de automóviles × 61 % × 29 %), proyectado con Gompertz:
+
+| Escenario | Parque | `K` | Crecimiento a 1 / 3 / 5 / 10 años | Cuota implícita máx. (actual / 2023–2024) | 95 % de `K` |
+|---|---|---|---|---|---|
+| **Central** (70,7 %, techo de la cuota 61 %) | 1 187 700 | **210 103** | ×3,2 / ×14,9 / ×36,4 / ×90,9 | **88 % / 132 %** | 2043 |
+| Automóviles 64,6 % | 1 085 100 | 191 954 | ×3,2 / ×14,5 / ×35,0 / ×84,7 | 82 % / 122 % | 2043 |
+| Automóviles 76,0 % | 1 276 600 | 225 829 | ×3,2 / ×15,1 / ×37,5 / ×96,2 | 93 % / 140 % | 2043 |
+| Techo de la cuota 53 % | 1 187 700 | 182 548 | ×3,1 / ×14,4 / ×34,2 / ×81,5 | 79 % / 118 % | 2043 |
+| Techo de la cuota 71 % | 1 187 700 | 244 546 | ×3,2 / ×15,4 / ×38,8 / ×102,2 | 100 % / 149 % | 2044 |
+| Sin aproximar (todos los automotores) | 1 679 722 | 297 143 | ×3,2 / ×16,1 / ×42,1 / ×118,4 | 117 % / 175 % | 2045 |
+
+**Consecuencia: B1 no pasa el control de 2.4 en ningún escenario.** Aun en el más bajo, la curva
+necesita que el 79 % de los autos nuevos sea enchufable, por encima del techo de la cuota de los
+mercados maduros (61 %). Con el mercado de 2023–2024 supera el 100 %, que es físicamente imposible.
+
+El origen es un conflicto entre las dos fuentes de la curva. El techo estructural es razonable, pero a
+ese techo se llega en lo que tarda en renovarse el parque: 1 187 700 / 82 677 ≈ **14 años de ventas**
+al ritmo actual, contados después de que la cuota ya se estabilizó. Gompertz, con la velocidad
+ajustada a la aceleración actual de CABA, intenta llegar antes. Es una decisión pendiente del equipo:
+cómo hacer compatible el techo estructural con la velocidad de la curva, o elegir otra rama.
+
 **Pros**
 - Es la más simple: una multiplicación.
 - Un solo supuesto de analogía: que CABA llegue al techo de la cuota de los mercados maduros. El
@@ -241,7 +290,8 @@ posibles: IDECBA o DNRPA.
 - Es compatible con la propuesta: "basándonos en las características de la misma para otros países".
 
 **Contras**
-- Requiere un dato que hoy no está en el repositorio.
+- El dato disponible incluye todos los automotores: hay que aproximar la fracción de automóviles (ver
+  abajo).
 - Supone un parque de CABA constante en el horizonte.
 - Hay que reescribir 2.3, incluida la frase "`K` no depende del parque total de CABA".
 - Con un parque grande, el control de 2.4 puede quedar al límite (ver la sección 6).
@@ -436,13 +486,16 @@ actual / el de 2023–2024. Límites: techo de la cuota de los países, 61 %; co
 | A21 | 111 592 | ×3,1 / ×12,6 / ×27,1 / ×54,7 | 53 % / 79 % | 2040 | Pasa con el mercado actual; no pasa con el de 2023–2024 |
 | A22 logística | 131 396 | ×3,1 / ×13,2 / ×29,3 / ×62,5 | 60 % / 90 % | 2041 | Justo con el mercado actual; no pasa con el de 2023–2024 |
 | A22 Gompertz | 164 508 | ×3,1 / ×14,0 / ×32,6 / ×75,0 | 72 % / 108 % | 2042 | No pasa |
-| B1, B2 | Depende del parque | Ver los parques equivalentes de la sección 3 | — | — | Pendiente del dato |
+| B1 | 210 103 | ×3,2 / ×14,9 / ×36,4 / ×90,9 | 88 % / 132 % | 2043 | No pasa |
+| B2 logística | 219 307 | Similar a B1 (`K` 4 % mayor) | — | — | No pasa |
 
 ---
 
 ## 7. Próximos pasos si se confirma B1
 
-1. Conseguir el parque de automóviles de CABA (especificación en la sección 3).
+1. Resolver el conflicto con el control de 2.4 (sección 3, "Consecuencia"). El dato del parque ya está
+   en `Datos/Parque Automotor CABA.xlsx`: se usa junio de 2026 por la fracción de automóviles aproximada
+   con los patentamientos.
 2. En los dos notebooks, en la misma celda y en el mismo commit:
    - **2.3:** el techo pasa a ser `parque × mediana del máximo histórico de la cuota × 29 %`. El
      cruce y los cocientes quedan como control o se eliminan, según decida el equipo. Hay que
