@@ -79,3 +79,16 @@ git ignora el atributo **sin avisar** y commitea el notebook entero con los outp
 El dataset del TP 4 (`EVChargingStationUsage.csv`) vive en Drive, en
 `/content/drive/MyDrive/Colab Notebooks/TP 4 Simu/Datos/`, y se monta desde el notebook con
 `drive.mount('/content/drive')`. No está versionado en este repositorio.
+
+Los datos del TP Final están en [Datos/](Datos/). Es una copia local de la carpeta de Drive
+`/content/drive/MyDrive/Colab Notebooks/TP Final Simu/Datos/`, que es de donde los lee la versión de
+Colab del notebook. Un archivo nuevo se agrega en los dos lugares.
+
+| Archivo | Contenido | Uso |
+|---|---|---|
+| `Dataset California.csv` | Sesiones de la red pública de carga de Palo Alto (California, EE. UU.), 2011–2020 | FDPs de `TC` y de las seis `IA` (secciones 3 a 5) |
+| `Dataset Escocia.xlsx` | Reportes de fallas de cargadores de la red pública de Escocia, 2021–2022 | FDPs de `TFC` y `TRC` (sección 6) |
+| `Total Patentamientos CABA.xlsx` | Patentamientos trimestrales de automotores por tipo en CABA (IDECBA, cuadro AC_AU_AX03, sobre datos de ACARA) | Stock de enchufables de CABA (sección 2) |
+| `Distribución Patentamientos CABA.xlsx` | Distribución trimestral de esos patentamientos por tipo de motor (IDECBA, cuadro AC_AU_AX08) | Stock de enchufables de CABA (sección 2) |
+| `EV data by country 2026.xlsx` | Stock, ventas y cuota de autos eléctricos por país (IEA, *Global EV Outlook 2026*) | Techo del parque a partir de los mercados maduros (sección 2) |
+| `Parque Automotor CABA.xlsx` | Parque automotor mensual de CABA y del país, de 2010 a octubre de 2026 (IDECBA, cuadro TPTE_PA, sobre datos de la DNRPA). Incluye todos los automotores, no sólo automóviles; los datos desde mayo de 2026 son provisorios | Techo estructural del parque, rama B de [Alternativas_Techo_K.md](Alternativas_Techo_K.md). Todavía no lo usa el notebook |
