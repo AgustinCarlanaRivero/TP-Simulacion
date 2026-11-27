@@ -85,7 +85,8 @@ Metodología: **evento a evento**, avance al próximo evento por mínimo de la T
    nocturna) y los acumuladores por franja y el costo de energía se **prorratean** entre las franjas
    que atraviesa cada tramo.
 2. **Crecimiento a largo plazo**: curva de Gompertz `P(t) = K·e^(−b·e^(−c·t))` ajustada al parque de
-   EV/PHEV de CABA, con el techo `K` tomado de la mediana de siete mercados maduros (reemplaza a la
+   EV/PHEV de CABA, con el techo `K` = parque de automóviles de CABA × mediana del máximo histórico de la
+   cuota de enchufables en las ventas de siete mercados maduros × 29 % que carga en estaciones (reemplaza a la
    logística de la propuesta original, que proyectaba una saturación irrealmente rápida; ver la sección 2
    del notebook). De ahí sale un **factor variable en el tiempo** que multiplica el IA generado
    (`P(T=0) / P(T)`, sobre el stock: achica los IA rápido en la fase de aceleración y cada vez más lento

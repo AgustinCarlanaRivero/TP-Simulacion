@@ -15,12 +15,11 @@ comunes a todas las ramas:
 | Fracción que carga en estaciones públicas | 29 % |
 | Mercados maduros de referencia | Noruega, Suecia, Finlandia, Islandia, Dinamarca, Países Bajos, China |
 
-**Estado actual del notebook:** rama **A12** con logística, denominador estimado, mediana y sin
-sensibilidad (`K` = 56 294).
-
-**Elección tentativa:** rama **B1**, con mediana y análisis de sensibilidad. Falta confirmarla con el
-equipo. El dato del parque de CABA ya está en `Datos/Parque Automotor CABA.xlsx`, pero hay que
-aproximar la fracción de automóviles, y con ese dato B1 no pasa el control de 2.4 (ver la sección 3).
+**Estado actual del notebook:** rama **B1**, con mediana y sin sensibilidad. La fracción de automóviles
+se aproxima con los patentamientos de toda la serie disponible, 2016 al 2.º trimestre de 2026 (73,3 %):
+parque de automóviles de 1 230 424 y `K` = **217 662**. La velocidad de Gompertz se reajusta por
+mínimos cuadrados en niveles (`c` = 0,272/año). B1 no pasa el control de 2.4 (ver la sección 3): queda
+como pendiente en el notebook.
 
 ---
 
@@ -256,8 +255,12 @@ parque por tipo, así que se aproxima la fracción de automóviles con la de los
 
 `parque de automóviles ≈ 1 679 722 × 70,7 % ≈ 1 187 700`
 
-Supuesto a explicitar: la composición del parque por tipo de vehículo es la de los patentamientos de
-2020–2026. Es una aproximación, porque el parque acumula décadas de ventas con otra composición. El
+**Adoptado en el notebook: toda la serie disponible, 2016 al 2.º trimestre de 2026, 73,3 %** (parque de
+automóviles de 1 230 424, `K` = 217 662). El parque acumula ventas de muchos años, así que la ventana
+más larga es la que mejor lo aproxima, y diluye la caída de 2021–2023 (64,6 % a 68,9 %). Los valores de
+la tabla de abajo son con 70,7 %.
+
+Supuesto a explicitar: la composición del parque por tipo de vehículo es la de los patentamientos. Es una aproximación, porque el parque acumula décadas de ventas con otra composición. El
 rango anual (64,6 % a 76,0 %) da un parque de automóviles de entre 1,09 M y 1,28 M.
 
 **Resultado con B1** (`K` = parque de automóviles × 61 % × 29 %), proyectado con Gompertz:
