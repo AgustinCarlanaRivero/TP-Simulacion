@@ -34,18 +34,25 @@ K (techo del stock de enchufables de CABA que cargan en estaciones)
 │   │
 │   ├── A1) Techo de cada país a partir de su stock
 │   │   ├── A11) Máximo histórico del stock
-│   │   └── A12) Curva ajustada al stock (logística o Gompertz)   ← implementado hoy (logística)
+│   │   └── A12) Curva ajustada al stock (logística o Gompertz)
 │   │
 │   └── A2) Techo de cada país = parque total del país × techo de su cuota de ventas
 │       ├── A21) Techo de la cuota = máximo histórico
 │       └── A22) Techo de la cuota = curva ajustada a la cuota (logística o Gompertz)
 │
-└── B) Parque total de autos de CABA × mediana del techo de la cuota de los países × 29 %
-    ├── B1) Techo de la cuota = máximo histórico                  ← elección tentativa
-    └── B2) Techo de la cuota = curva ajustada a la cuota (logística o Gompertz)
+├── B) Parque total de autos de CABA × mediana del techo de la cuota de los países × 29 %
+│   ├── B1) Techo de la cuota = máximo histórico                  ← implementado (velocidad acotada)
+│   └── B2) Techo de la cuota = curva ajustada a la cuota (logística o Gompertz)
+│
+└── C) K de la rama B, con la "S" en la cuota y el stock por acumulación
+    ├── C1) Velocidad de la cuota ajustada a la serie de CABA
+    └── C2) Velocidad de la cuota = mediana de los mercados maduros
 ```
 
-Las decisiones de soporte (sección 4) atraviesan el árbol:
+La rama C no estima `K` de otra manera: usa el de la rama B y cambia la curva de proyección (decisión
+de soporte A).
+
+Las decisiones de soporte (sección 5) atraviesan el árbol:
 
 | | Decisión | Ramas que afecta |
 |---|---|---|
@@ -54,7 +61,7 @@ Las decisiones de soporte (sección 4) atraviesan el árbol:
 | C | Denominador estimado u observado | A12 |
 | D | Sólo la mediana o también sensibilidad | Todas |
 | E | Logística o Gompertz para estimar techos | A12, A22, B2 |
-| F a I | Otras decisiones y supuestos (sección 5) | Varias |
+| F a I | Otras decisiones y supuestos (sección 6) | Varias |
 
 **Cruce.** Es el instante en que la cuota de enchufables en las ventas de un país alcanzó el 9,1 % actual
 de CABA. Es el punto equivalente, en ese país, a la etapa en que hoy está CABA.
@@ -192,7 +199,7 @@ observado.
 - Los supuestos de analogía son tres (techo de la cuota, renovación y profundidad), contra uno de la
   rama B.
 - Más del doble de `K` que la rama A12 actual.
-- Deja el control de 2.4 al límite (ver la sección 6).
+- Deja el control de 2.4 al límite (ver la sección 7).
 
 #### A21) Techo de la cuota = máximo histórico
 
@@ -304,7 +311,7 @@ hasta 61 % y stock por acumulación), que cambia la curva de la propuesta.
   abajo).
 - Supone un parque de CABA constante en el horizonte.
 - Hay que reescribir 2.3, incluida la frase "`K` no depende del parque total de CABA".
-- Con un parque grande, el control de 2.4 puede quedar al límite (ver la sección 6).
+- Con un parque grande, el control de 2.4 puede quedar al límite (ver la sección 7).
 
 **Control extra que permite:** `parque / ventas anuales de autos` da los años de renovación del
 parque de CABA. Se puede contrastar con el año en que la curva llega al 95 % de `K`.
@@ -360,7 +367,82 @@ cada una de las otras alternativas:
 
 ---
 
-## 4. Decisiones de soporte
+## 4. Rama C: la "S" en la cuota y el stock por acumulación
+
+Toma el `K` de la rama B (con B1, 217 662) y cambia la curva de proyección. En lugar de ajustar una "S"
+al stock, se la ajusta a la cuota de enchufables en las ventas de autos nuevos, y el stock sale de
+acumular lo que se vende:
+
+- `cuota(t) = 61 % / (1 + e^(−r·(t − t_m)))`, anclada en el 9,1 % del 2.º trimestre de 2026, lo que fija
+  `t_m`. Sube desde el valor actual y se estabiliza en el techo de la cuota, sin volver a bajar.
+- `P(t) = min(K, P(T=0) + ventas anuales × 29 % × ∫ cuota)`. La integral tiene fórmula cerrada,
+  `(61 % / r) · ln(1 + e^(r·(t − t_m)))`, así que el factor sigue siendo una función escalar.
+
+**Por qué se planteó.** En los mercados maduros la cuota satura y el stock no: sigue creciendo en forma
+lineal hasta que se renueva el parque (ver A1). Una "S" sobre el stock hace que su pendiente, y con ella
+la cuota implícita, tenga forma de campana: sube hasta un pico y vuelve a bajar. En Gompertz anclada, el
+cociente entre la cuota máxima y la de `T = 0` es `K / (e · P(T=0) · ln(K / P(T=0)))`, que no depende
+de la velocidad: con el `K` de B1 vale 9,8, así que si la curva reproduce el 9,1 % actual el pico queda
+en 89 %. En la rama C la cuota es el dato de entrada: no puede superar el techo. El stock queda con
+forma exponencial al principio, lineal con la cuota en el techo (unos 14 600 vehículos por año con las
+ventas actuales) y se detiene en `K`.
+
+Valores con `K` = 217 662 y las ventas de los últimos cuatro trimestres (82 677 por año). Error: suma de
+los cuadrados de los desvíos contra el stock observado de CABA (26 trimestres); como referencia, la
+Gompertz de B1 da 56 240 sin acotar y 407 369 con la velocidad acotada.
+
+| Variante | `r` (1/año) | Crecimiento a 1 / 3 / 5 / 10 años | Cuota a 1 / 3 / 5 años | 95 % de `K` | Error |
+|---|---|---|---|---|---|
+| C1 | 1,76 | ×4,1 / ×18,6 / ×35,8 / ×79,1 | 34 % / 60 % / 61 % | 2041 | 38 595 |
+| C2 | 0,81 | ×3,0 / ×11,5 / ×25,7 / ×68,1 | 18 % / 42 % / 56 % | 2043 | 33,9 M |
+
+**Pros**
+- Respeta el techo de la cuota y la cota física por construcción, y reproduce la cuota de `T = 0` porque
+  está anclada ahí. Con el mercado de 2023–2024, la cuota implícita máxima es de 91 %.
+- La forma (exponencial, lineal y saturación) es la que muestran los mercados maduros.
+- Llega a `K` cerca de los 14,9 años de renovación del parque.
+- El factor sigue teniendo fórmula cerrada.
+
+**Contras**
+- **Se aparta de la propuesta**, que plantea una curva en "S" sobre la demanda (el stock), no sobre la
+  cuota.
+- El control de la cuota se cumple por construcción, así que deja de ser evidencia de la curva.
+- Las ventas anuales entran en la curva, no sólo en el control: cambiar ese supuesto cambia la
+  proyección.
+- El tope en `K` es un quiebre brusco: en la realidad lo suavizan las bajas de los primeros
+  enchufables, que se ignoran.
+- Hay que elegir `r` (ver C1 y C2).
+
+### C1) Velocidad de la cuota ajustada a la serie de CABA
+
+`r` por mínimos cuadrados en niveles sobre la cuota trimestral de CABA, con la curva anclada.
+
+**Pros:** usa sólo datos de CABA, y el stock acumulado ajusta el observado mejor que la Gompertz sin
+acotar.
+**Contras:** `r` = 1,76 es más rápido que el de cualquiera de los siete mercados maduros (0,38 a 1,13):
+supone que CABA pasa de 9 % a 60 % de enchufables en tres años. Parte de la aceleración observada viene
+del salto de la proporción de enchufables entre los electrificados del SIOMAA (11 % en 2024, 21 % en
+2025, 30 % en 2026).
+
+### C2) Velocidad de la cuota = mediana de los mercados maduros
+
+`r` es la mediana de las velocidades de las logísticas ajustadas a la cuota de cada país: Noruega 0,49,
+Suecia 1,03, Finlandia 0,89, Islandia 1,13, Dinamarca 0,66, Países Bajos 0,38 y China 0,81 (mediana
+0,81).
+
+**Pros:** sigue la misma lógica que el techo de la cuota (61 %): las dos magnitudes salen de los
+mercados maduros.
+**Contras:** no reproduce el tramo pasado de CABA, cuya cuota subió más rápido (error tres órdenes de
+magnitud mayor que C1).
+
+**Evaluación de la rama C:** descartada. La propuesta aprobada plantea una curva en "S" sobre la
+demanda, y que los mercados reales tengan forma exponencial, luego lineal y luego logarítmica se acepta
+como una simplificación conocida del modelo. La rama B1 con la velocidad acotada (decisión F) pasa el
+control sin salirse de esa curva.
+
+---
+
+## 5. Decisiones de soporte
 
 ### A) Curva de proyección del stock de CABA: logística o Gompertz
 
@@ -374,6 +456,9 @@ por cualquier `K`:
   de 2023–2024.
 - **Gompertz:** reproduce la cuota observada en `T = 0` y respeta el techo de la cuota hasta
   `K` ≈ 130 000 con el mercado actual, y hasta `K` ≈ 79 000 con el de 2023–2024.
+
+La rama C reemplaza esta curva por la acumulación de una logística de la cuota (sección 4). Está
+descartada.
 
 ### B) Mediana o media geométrica (rama A)
 
@@ -440,7 +525,7 @@ En cualquier caso, si se elige el máximo histórico (A11, A21, B1), esta decisi
 
 ---
 
-## 5. Otras decisiones y supuestos (no estaban en la lista original)
+## 6. Otras decisiones y supuestos (no estaban en la lista original)
 
 ### F) Estimación de la velocidad `c` de Gompertz (todas las ramas)
 
@@ -454,6 +539,12 @@ Con `K` fijo y la curva anclada a `P(T=0)`, queda un único parámetro libre.
 
 **Recomendación:** mantener mínimos cuadrados en niveles. Los valores de la tabla son con
 `K` = 56 294; con otro `K` se vuelve a ajustar `c`.
+
+**Con el `K` de B1 (217 662), velocidad acotada (implementado).** Mínimos cuadrados en niveles da
+`c` = 0,272 y la cuota implícita llega a 91 %. La pendiente máxima de Gompertz es `K·c/e` (en la
+inflexión, con `P = K/e`) y no puede superar `ventas anuales × 61 % × 29 %` (14 625 vehículos por año),
+así que `c ≤ 0,183`. El ajuste de mínimos cuadrados con esa cota queda en la cota: `c` = 0,183. A cambio,
+la curva implica 6,3 % de enchufables en `T = 0`, contra el 9,1 % observado.
 
 ### G) Último dato o máximo histórico para el techo de la cuota (A21, B1)
 
@@ -481,35 +572,41 @@ El sesgo de selección se describe en la decisión D.
 
 ---
 
-## 6. Resumen de las hojas, proyectadas con Gompertz
+## 7. Resumen de las hojas
 
-Todas las hojas con mediana y denominador observado, salvo la de A12 marcada como actual. Cuota
+Todas las hojas con mediana y denominador observado, salvo la de A12 marcada como tal, y proyectadas
+con Gompertz con la velocidad de mínimos cuadrados sin acotar, salvo las indicadas. Cuota
 implícita máxima: % de enchufables en los patentamientos de CABA que necesita la curva, con el mercado
 actual / el de 2023–2024. Límites: techo de la cuota de los países, 61 %; cota física, 100 %.
 
 | Hoja | `K` | Crecimiento a 1 / 3 / 5 / 10 años | Cuota implícita máx. | 95 % de `K` | Control |
 |---|---|---|---|---|---|
 | A11 | 23 493 | ×2,6 / ×7,2 / ×10,7 / ×13,6 | 17 % / 25 % | 2035 | Pasa |
-| A12 logística, actual | 56 294 | ×2,9 / ×10,2 / ×18,7 / ×30,3 | 31 % / 47 % | 2038 | Pasa |
+| A12 logística, denominador estimado | 56 294 | ×2,9 / ×10,2 / ×18,7 / ×30,3 | 31 % / 47 % | 2038 | Pasa |
 | A12 logística, observado | 62 698 | ×2,9 / ×10,6 / ×19,9 / ×33,4 | 34 % / 51 % | 2038 | Pasa |
 | A12 Gompertz | 205 490 | ×3,2 / ×14,8 / ×36,0 / ×89,4 | 87 % / 129 % | 2043 | No pasa |
 | A21 | 111 592 | ×3,1 / ×12,6 / ×27,1 / ×54,7 | 53 % / 79 % | 2040 | Pasa con el mercado actual; no pasa con el de 2023–2024 |
 | A22 logística | 131 396 | ×3,1 / ×13,2 / ×29,3 / ×62,5 | 60 % / 90 % | 2041 | Justo con el mercado actual; no pasa con el de 2023–2024 |
 | A22 Gompertz | 164 508 | ×3,1 / ×14,0 / ×32,6 / ×75,0 | 72 % / 108 % | 2042 | No pasa |
-| B1 | 210 103 | ×3,2 / ×14,9 / ×36,4 / ×90,9 | 88 % / 132 % | 2043 | No pasa |
+| B1 (70,7 % de automóviles) | 210 103 | ×3,2 / ×14,9 / ×36,4 / ×90,9 | 88 % / 132 % | 2043 | No pasa |
+| B1 (73,3 % de automóviles) | 217 662 | ×3,2 / ×15,0 / ×36,9 / ×93,5 | 91 % / 136 % | 2043 | No pasa |
+| **B1, velocidad acotada (actual)** | 217 662 | ×2,3 / ×7,8 / ×18,3 / ×59,0 | 61 % / 91 % | 2051 | Pasa con el mercado actual; con el de 2023–2024 respeta la cota física pero no el techo de la cuota |
 | B2 logística | 219 307 | Similar a B1 (`K` 4 % mayor) | — | — | No pasa |
+| C1 (cuota logística, sin Gompertz) | 217 662 | ×4,1 / ×18,6 / ×35,8 / ×79,1 | 61 % / 91 % | 2041 | Pasa por construcción |
+| C2 (cuota logística, sin Gompertz) | 217 662 | ×3,0 / ×11,5 / ×25,7 / ×68,1 | 61 % / 91 % | 2043 | Pasa por construcción |
 
 ---
 
-## 7. Próximos pasos si se confirma B1
+## 8. Próximos pasos si se confirma B1
 
-1. Resolver el conflicto con el control de 2.4 (sección 3, "Consecuencia"). El dato del parque ya está
+1. ~~Resolver el conflicto con el control de 2.4 (sección 3, "Consecuencia").~~ Resuelto acotando la
+   velocidad de Gompertz (decisión F). El dato del parque ya está
    en `Datos/Parque Automotor CABA.xlsx`: se usa junio de 2026 por la fracción de automóviles aproximada
    con los patentamientos.
 2. En los dos notebooks, en la misma celda y en el mismo commit:
    - **2.3:** el techo pasa a ser `parque × mediana del máximo histórico de la cuota × 29 %`. El
      cruce y los cocientes quedan como control o se eliminan, según decida el equipo. Hay que
-     explicitar los supuestos de la sección 5 y el sesgo de selección.
+     explicitar los supuestos de la sección 6 y el sesgo de selección.
    - **2.4:** rehacer la comparación y los controles con el `K` nuevo. Usar 61 % como techo de la
      cuota y agregar el control de los años de renovación del parque.
    - **2.5:** actualizar los valores del factor.
