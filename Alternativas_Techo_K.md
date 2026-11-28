@@ -17,9 +17,11 @@ comunes a todas las ramas:
 
 **Estado actual del notebook:** rama **B1**, con mediana y sin sensibilidad. La fracción de automóviles
 se aproxima con los patentamientos de toda la serie disponible, 2016 al 2.º trimestre de 2026 (73,3 %):
-parque de automóviles de 1 230 424 y `K` = **217 662**. La velocidad de Gompertz se reajusta por
-mínimos cuadrados en niveles (`c` = 0,272/año). B1 no pasa el control de 2.4 (ver la sección 3): queda
-como pendiente en el notebook.
+parque de automóviles de 1 230 424 y `K` = **217 662**. La velocidad de Gompertz se ajusta por
+mínimos cuadrados en niveles, acotada a la máxima compatible con el techo de la cuota
+(`c ≤ e · 61 % · ventas anuales · 29 % / K` = 0,183/año). Sin la cota daría 0,272/año y no pasaría
+el control de 2.4 (ver la sección 3). Con la cota lo pasa, a cambio de implicar 6,3 % de enchufables
+en `T = 0` contra el 9,1 % observado.
 
 ---
 
@@ -281,8 +283,13 @@ mercados maduros (61 %). Con el mercado de 2023–2024 supera el 100 %, que es f
 El origen es un conflicto entre las dos fuentes de la curva. El techo estructural es razonable, pero a
 ese techo se llega en lo que tarda en renovarse el parque: 1 187 700 / 82 677 ≈ **14 años de ventas**
 al ritmo actual, contados después de que la cuota ya se estabilizó. Gompertz, con la velocidad
-ajustada a la aceleración actual de CABA, intenta llegar antes. Es una decisión pendiente del equipo:
-cómo hacer compatible el techo estructural con la velocidad de la curva, o elegir otra rama.
+ajustada a la aceleración actual de CABA, intenta llegar antes. En Gompertz anclada, el cociente entre
+la cuota máxima y la de `T = 0` es `K / (e · P(T=0) · ln(K / P(T=0)))` (9,8), y no depende de `c`:
+ninguna velocidad reproduce el 9,1 % actual y respeta el 61 %.
+
+**Resuelto en el notebook acotando la velocidad** (ver "Estado actual"). Se descartaron borrar o aflojar
+el control y bajar `K`. Queda como alternativa más fiel pasar la "S" a la cuota (logística de la cuota
+hasta 61 % y stock por acumulación), que cambia la curva de la propuesta.
 
 **Pros**
 - Es la más simple: una multiplicación.
