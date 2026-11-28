@@ -21,7 +21,7 @@ parque de automóviles de 1 230 424 y `K` = **217 662**. La velocidad de Gompert
 mínimos cuadrados en niveles, acotada a la máxima compatible con el techo de la cuota
 (`c ≤ e · 61 % · ventas anuales · 29 % / K` = 0,183/año). Sin la cota daría 0,272/año y no pasaría
 el control de 2.4 (ver la sección 3). Con la cota lo pasa, a cambio de implicar 6,3 % de enchufables
-en `T = 0` contra el 9,1 % observado.
+en `T = 0` contra el 9,1 % observado. **Acotar la velocidad es una decisión abierta: ver la decisión J.**
 
 ---
 
@@ -61,7 +61,7 @@ Las decisiones de soporte (sección 5) atraviesan el árbol:
 | C | Denominador estimado u observado | A12 |
 | D | Sólo la mediana o también sensibilidad | Todas |
 | E | Logística o Gompertz para estimar techos | A12, A22, B2 |
-| F a I | Otras decisiones y supuestos (sección 6) | Varias |
+| F a J | Otras decisiones y supuestos (sección 6) | Varias |
 
 **Cruce.** Es el instante en que la cuota de enchufables en las ventas de un país alcanzó el 9,1 % actual
 de CABA. Es el punto equivalente, en ese país, a la etapa en que hoy está CABA.
@@ -544,7 +544,8 @@ Con `K` fijo y la curva anclada a `P(T=0)`, queda un único parámetro libre.
 `c` = 0,272 y la cuota implícita llega a 91 %. La pendiente máxima de Gompertz es `K·c/e` (en la
 inflexión, con `P = K/e`) y no puede superar `ventas anuales × 61 % × 29 %` (14 625 vehículos por año),
 así que `c ≤ 0,183`. El ajuste de mínimos cuadrados con esa cota queda en la cota: `c` = 0,183. A cambio,
-la curva implica 6,3 % de enchufables en `T = 0`, contra el 9,1 % observado.
+la curva implica 6,3 % de enchufables en `T = 0`, contra el 9,1 % observado. Si conviene dejarlo o
+sacarlo se discute en la decisión J.
 
 ### G) Último dato o máximo histórico para el techo de la cuota (A21, B1)
 
@@ -566,9 +567,77 @@ El sesgo de selección se describe en la decisión D.
 - **Autos patentados en CABA como base de la demanda.** En CABA también cargan autos del conurbano, y
   autos de CABA cargan afuera. Se supone que esos flujos se compensan, o que la demanda escala con el
   parque patentado en CABA. Hoy no figura en el notebook.
-- **Nivel de ventas en el control de 2.4.** Se supone constante en el nivel de los últimos cuatro
-  trimestres (82 677 autos por año), y se informa también con el de 2023–2024 (55 263). No entra en la
-  curva ni en el motor: es sólo un control de plausibilidad.
+- **Nivel de ventas en 2.4.** Se supone constante en el nivel de los últimos cuatro trimestres (82 677
+  autos por año), y la cuota máxima se informa también con el de 2023–2024 (55 263). Sin la velocidad
+  acotada es sólo un control de plausibilidad; con la velocidad acotada, además fija la cota de `c` y
+  entra en la curva (ver la decisión J).
+
+### J) Acotar o no la velocidad de Gompertz al techo de la cuota (B1) — abierta
+
+**Qué es.** Con `K` y el anclaje en `P(T=0)` fijos, la velocidad `c` decide en cuántos años se recorre
+la "S", sin cambiar su forma. La pendiente de la curva son los enchufables que se suman por año, y es
+máxima en la inflexión: `K·c/e`. Acotar la velocidad es exigir que esa pendiente no supere lo que
+pueden vender las ventas actuales con la cuota en el techo de los mercados maduros:
+
+`K·c/e ≤ ventas anuales × 61 % × 29 %`  →  `c ≤ e × 82 677 × 0,61 × 0,29 / 217 662 = 0,183`
+
+La velocidad se sigue ajustando por mínimos cuadrados en niveles sobre la serie de CABA, pero dentro de
+ese rango. Sin acotar, el ajuste elige 0,272, así que con la cota queda en el borde.
+
+**Por qué no hay una velocidad que cumpla todo.** En Gompertz anclada, el cociente entre la cuota
+máxima y la de `T = 0` es `K / (e · P(T=0) · ln(K / P(T=0)))` = 9,8, y no depende de `c`. Si la curva
+reproduce el 9,1 % actual, el pico es 89 %; si respeta el 61 % en el pico, hoy implica 6,3 %. Hay que
+resignar uno de los dos: sin acotar se resigna el techo de la cuota; acotada, el ritmo actual.
+
+| | Sin acotar | Acotada (implementado) |
+|---|---|---|
+| `c` (1/año) | 0,272 | 0,183 |
+| Cuota implícita en `T = 0` (observada: 9,1 %) | 9,3 % | 6,3 % |
+| Cuota implícita máx., mercado actual / 2023–2024 | 91 % / 136 % | 61 % / 91 % |
+| Inflexión | 2032 | 2035 |
+| 95 % de `K` | 2043 | 2051 |
+| Flujo de arribos a 1 / 3 / 5 / 10 años | ×3,2 / ×15,0 / ×36,9 / ×93,5 | ×2,3 / ×7,8 / ×18,3 / ×59,0 |
+| Error contra el stock observado (SSE) | 56 240 | 407 369 (×7) |
+| Control de 2.4 | No pasa | Pasa con el mercado actual; con el de 2023–2024 respeta la cota física pero no el techo |
+
+**Pros de acotar**
+- **Pasa el control de 2.4.** Con el mercado actual, la curva nunca necesita más enchufables que el
+  techo de la cuota de los mercados maduros, y con el de 2023–2024 respeta la cota física (91 %). Sin
+  acotar, con el mercado de 2023–2024 la curva necesita el 136 % de los autos nuevos: es físicamente
+  imposible.
+- **No se aparta de la propuesta.** Sigue siendo una Gompertz sobre el stock, ajustada a CABA por mínimos
+  cuadrados, y los otros países aportan el techo y el límite de la velocidad ("basándonos en las
+  características de la misma para otros países").
+- **Cambio chico.** Es una cota en el mismo ajuste, con fórmula cerrada. Las dos variantes ya se calculan
+  en 2.4.
+- **Proyección conservadora.** Genera menos demanda futura, lo que va en sentido contrario al sesgo de
+  selección del 61 % (decisión D), que tiende a sobrestimarla. No lo corrige: es sólo una compensación
+  parcial, sin una medida de cuánto.
+
+**Contras de acotar**
+- **No reproduce el presente.** Implica 6,3 % de enchufables en `T = 0`, contra el 9,1 % observado, y el
+  error contra el stock observado es 7 veces mayor. Subestima la demanda de los primeros años, que es
+  donde arranca la simulación (×2,3 a un año, contra ×3,2).
+- **La velocidad la fijan los supuestos, no los datos.** El ajuste queda en la cota, así que `c` sale de
+  `K`, del 61 % y del nivel de ventas: los datos de CABA sólo dicen que querrían ir más rápido.
+- **El nivel de ventas entra en la curva.** Sin acotar es sólo un control. Acotada, si se usara el nivel
+  de 2023–2024 la cota sería `c ≤ 0,122`, con un flujo de ×1,7 / ×4,4 / ×9,2 / ×30,7 a 1, 3, 5 y 10 años
+  y una cuota de 4,2 % en `T = 0`.
+- **`c` pasa a depender directamente de `K`** (`c ≤ … / K`): un error en el parque o en la fracción de
+  automóviles mueve la velocidad además del techo.
+- **El control del techo se cumple por construcción** con el mercado actual, así que deja de ser
+  evidencia de la curva. Los chequeos que siguen informando son la cuota de `T = 0` y el mercado de
+  2023–2024.
+- **Satura más tarde de lo necesario.** Llega al 95 % de `K` en 2051. La rama C2, que también respeta
+  el techo de la cuota pero con la velocidad de los mercados maduros, llega en 2043. La demora la impone
+  la forma de la "S" sobre el stock, no el techo ni la renovación del parque (14,9 años, hacia 2041).
+- **La cuota implícita sigue teniendo forma de campana.** Llega a 61 % en 2035 y después baja (59 % a
+  los 10 años), más despacio que sin acotar. Es la forma de la "S" sobre el stock (ver la rama C).
+
+**Si se saca.** Se usa la curva sin acotar (`c` = 0,272) y el incumplimiento del control se informa como
+limitación del modelo, que viene de la simplificación de la "S" de la propuesta. En el notebook es elegir
+en 2.4 la variante sin acotar para `curvas` y `velocidades`, y actualizar el texto de 2.4 y 2.5. Otras
+salidas, si no se acepta ninguna de las dos: bajar `K` (ramas A12 o A21) o la rama C.
 
 ---
 
